@@ -93,7 +93,12 @@ jobs:
 
       - name: the .deb must install and the binary must run
         run: |
-          sudo apt-get install -y ./dist/meerkat_0.0.0-ci_amd64.deb
+          # Globbed, not spelled out: nfpm rewrites a prerelease into Debian's
+          # ordering convention (0.0.0-ci becomes 0.0.0~ci), so the filename is
+          # not the version string that went in.
+          deb=$(ls dist/meerkat_*_amd64.deb)
+          echo "installing $deb"
+          sudo apt-get install -y "./$deb"
           meerkat version
           # doctor exits non-zero on a runner with no Suricata, by design; this
           # only checks that it runs and says why rather than crashing.
