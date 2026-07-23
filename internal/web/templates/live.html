@@ -1,0 +1,45 @@
+{{template "shell-open" .}}
+<div class="page-top">
+	<span class="page-eyebrow">Triage</span>
+	<div class="breadcrumb"><span class="current">Live tail</span></div>
+</div>
+<div class="page-header">
+	<div>
+		<h1>Live tail</h1>
+		<div class="page-sub">Alerts as they land. Useful for seeing what a sensor is doing right now — but this is the view meerkat exists to replace, so triage on <a href="/">Sources</a>.</div>
+	</div>
+	<div class="page-header-actions">
+		<label class="check-label"><input type="checkbox" id="live-follow" checked> Follow</label>
+		<span class="live-status" id="live-status" role="status" aria-live="polite">connecting&hellip;</span>
+	</div>
+</div>
+
+{{template "ingest-warning" .Ingest}}
+
+<div class="card">
+	<div class="card-header">
+		<span class="card-title">{{template "icon-activity"}}Newest first</span>
+		<span class="text-muted" id="live-count"></span>
+	</div>
+	<div class="table-scroll live-scroll">
+		<table data-search-target>
+			<thead><tr><th>When</th><th>Source</th><th>Signature</th><th>Proto</th><th>Destination</th><th>Sev</th></tr></thead>
+			<tbody id="live-body" data-cursor="{{.Cursor}}">
+				{{range .Events}}
+				<tr>
+					<td class="nowrap mono">{{fmttime .Ts}}</td>
+					<td class="mono"><a href="/sources/{{.SrcIP}}">{{.SrcIP}}</a></td>
+					<td><span class="mono">{{.SID}}</span> {{.Signature}}</td>
+					<td class="mono">{{.Proto}}</td>
+					<td class="mono">{{.DestIP}}{{if .DestPort}}:{{.DestPort}}{{end}}</td>
+					<td>{{severityBadge .Severity}}</td>
+				</tr>
+				{{else}}
+				<tr id="live-empty"><td colspan="6"><div class="empty">Nothing yet. New alerts will appear here as Suricata reports them.</div></td></tr>
+				{{end}}
+			</tbody>
+		</table>
+	</div>
+</div>
+<script src="/static/live.js" defer></script>
+{{template "shell-close" .}}

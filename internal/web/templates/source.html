@@ -1,0 +1,239 @@
+{{template "shell-open" .}}
+<div class="page-top">
+	<span class="page-eyebrow">Triage</span>
+	<div class="breadcrumb"><a href="/">Sources</a><span class="sep">/</span><span class="current mono">{{.Source.IP}}</span></div>
+</div>
+<div class="page-header">
+	<div>
+		<h1 class="mono">{{.Source.IP}}</h1>
+		<div class="page-sub">{{template "source-identity" .Source}}</div>
+	</div>
+	<div class="page-header-actions">
+		{{stateBadge .Source.State}}
+		<a class="btn btn-sm" href="/sources">{{template "icon-back"}}All sources</a>
+	</div>
+</div>
+
+{{if .Done}}<div class="card card-success"><div class="card-body">{{.Done}}</div></div>{{end}}
+{{if .Err}}<div class="card card-danger"><div class="card-body">{{.Err}}</div></div>{{end}}
+
+{{if .Source.IsLocal}}
+<div class="card card-warning">
+	<div class="card-body">{{template "icon-alert"}} <strong>This is a private, loopback or CGNAT address — it is one of ours.</strong>
+	Alerts from it usually mean an internal host is misbehaving, or that Suricata's <span class="mono">HOME_NET</span> is wrong.
+	It is not something to block at the edge, and it is never published to the public threat map.</div>
+</div>
+{{end}}
+
+<div class="stat-grid">
+	<div class="stat tint-primary">
+		<div class="stat-label">Alerts</div>
+		<div class="stat-main"><span class="stat-icon">{{template "icon-activity"}}</span><span class="stat-value">{{num .Source.EventCount}}</span></div>
+		<div class="stat-rule"></div>
+		<span class="stat-note">{{if .Retained}}{{num .Source.EventCount}} seen in total, {{.StoredEvents}} still stored{{else}}all still stored{{end}}</span>
+	</div>
+	<div class="stat tint-secondary">
+		<div class="stat-label">Distinct signatures</div>
+		<div class="stat-main"><span class="stat-icon">{{template "icon-list"}}</span><span class="stat-value">{{.Source.SigCount}}</span></div>
+		<div class="stat-rule"></div>
+		<span class="stat-note">{{if gt .Source.SigCount 1}}several rules — worth a look{{else}}one rule, repeating{{end}}</span>
+	</div>
+	<div class="stat tint-warning">
+		<div class="stat-label">Distinct ports</div>
+		<div class="stat-main"><span class="stat-icon">{{template "icon-shield"}}</span><span class="stat-value">{{.Source.PortCount}}</span></div>
+		<div class="stat-rule"></div>
+		<span class="stat-note">{{if gt .Source.PortCount 5}}spraying ports — looks like scanning{{else}}destination ports touched{{end}}</span>
+	</div>
+	<div class="stat tint-danger">
+		<div class="stat-label">Worst severity</div>
+		<div class="stat-main"><span class="stat-icon">{{template "icon-alert"}}</span><span class="stat-value">{{severityBadge .Source.WorstSeverity}}</span></div>
+		<div class="stat-rule"></div>
+		<span class="stat-note">active {{duration .Source.FirstSeen .Source.LastSeen}}</span>
+	</div>
+</div>
+
+<div class="card">
+	<div class="card-header"><span class="card-title">{{template "icon-info"}}Summary</span></div>
+	<div class="card-body">
+		<dl class="kv-grid">
+			<dt>First seen</dt><dd title="{{fmttime .Source.FirstSeen}}"><span data-ts="{{isotime .Source.FirstSeen}}">{{fmttime .Source.FirstSeen}}</span></dd>
+			<dt>Last seen</dt><dd title="{{fmttime .Source.LastSeen}}"><span data-ts="{{isotime .Source.LastSeen}}">{{fmttime .Source.LastSeen}}</span></dd>
+			<dt>Country</dt><dd>{{if .Source.Country}}{{flag .Source.Country}} {{.Source.Country}}{{if .Source.CountryName}} — {{.Source.CountryName}}{{end}}{{else}}<span class="text-muted">unknown</span>{{end}}</dd>
+			<dt>City</dt><dd>{{if .Source.City}}{{.Source.City}}{{else}}<span class="text-muted">unknown</span>{{end}}</dd>
+			<dt>Autonomous system</dt><dd>{{if .Source.ASN}}<a href="/sources?asn={{.Source.ASN}}">AS{{.Source.ASN}}</a>{{if .Source.ASOrg}} {{.Source.ASOrg}}{{end}}{{else}}<span class="text-muted">unknown</span>{{end}}</dd>
+			<dt>State</dt><dd>{{stateBadge .Source.State}}{{if .Source.StateNote}} <span class="text-muted">{{.Source.StateNote}}</span>{{end}}{{if .Source.StateBy}} <span class="text-muted">— set by {{.Source.StateBy}} {{fmttime .Source.StateAt}}</span>{{end}}</dd>
+		</dl>
+	</div>
+</div>
+
+<div class="card">
+	<div class="card-header">
+		<span class="card-title">{{template "icon-ban"}}Act on this source</span>
+		{{if .Source.BlockedUntil}}<span class="text-muted">block expires {{fmttime .Source.BlockedUntil}}</span>{{end}}
+	</div>
+	<div class="card-body">
+		{{if .Source.IsLocal}}
+		<p class="text-muted">This is one of our own addresses, so it cannot be blocked at the edge — doing so would cut off an internal host. Acknowledge it and investigate the host instead.</p>
+		{{else if not .CanBlock}}
+		<p class="text-muted">Blocking is not configured. Set nftably's URL and API token under <a href="/settings?tab=blocking">Settings &rarr; Blocking</a> and this becomes available. meerkat never changes the firewall itself — a block is a call to nftably.</p>
+		{{end}}
+
+		<div class="action-row">
+			{{if and (not .Source.IsLocal) .CanBlock}}
+			{{if eq .Source.State "blocked"}}
+			<form method="post" action="/sources/{{.Source.IP}}/unblock" class="action-form"
+			      data-confirm="Unblock {{.Source.IP}}? Traffic from it will be allowed again.">
+				<input type="hidden" name="back" value="/sources/{{.Source.IP}}">
+				<input type="text" name="reason" placeholder="Why? (recorded in the ledger)" aria-label="Reason">
+				<button type="submit" class="btn">{{template "icon-ban"}}Unblock</button>
+			</form>
+			{{else}}
+			<form method="post" action="/sources/{{.Source.IP}}/block" class="action-form"
+			      data-confirm="Block {{.Source.IP}} in nftables? This drops its traffic at the edge.">
+				<input type="hidden" name="back" value="/sources/{{.Source.IP}}">
+				<input type="text" name="reason" placeholder="Why? (recorded in the ledger)" aria-label="Reason">
+				<select name="ttl" aria-label="Block duration">
+					{{range .TTLs}}<option value="{{.Value}}">{{.Label}}</option>{{end}}
+				</select>
+				<button type="submit" class="btn btn-danger">{{template "icon-ban"}}Block</button>
+			</form>
+			{{end}}
+			{{end}}
+
+			<form method="post" action="/sources/{{.Source.IP}}/acknowledge" class="action-form">
+				<input type="hidden" name="back" value="/sources/{{.Source.IP}}">
+				<button type="submit" class="btn">Acknowledge</button>
+			</form>
+			<form method="post" action="/sources/{{.Source.IP}}/allowlist" class="action-form"
+			      data-confirm="Allowlist {{.Source.IP}}? It will not be alerted on again.">
+				<input type="hidden" name="back" value="/sources/{{.Source.IP}}">
+				<button type="submit" class="btn">Allowlist</button>
+			</form>
+		</div>
+
+		<p class="text-muted hint">A block is an authenticated call to nftably, which owns the firewall. This page only says <strong>blocked</strong> once that call has succeeded, and a background reconcile keeps it honest — if the address is removed from nftably by hand, meerkat stops claiming it.</p>
+	</div>
+</div>
+
+{{if .Timeline}}
+<div class="card">
+	<div class="card-header">
+		<span class="card-title">{{template "icon-activity"}}Activity</span>
+		<span class="text-muted">{{.StoredEvents}} stored alerts, {{fmttime .Source.FirstSeen}} to {{fmttime .Source.LastSeen}}</span>
+	</div>
+	<div class="card-body">
+		<svg class="spark" viewBox="0 0 480 100" preserveAspectRatio="none" role="img"
+		     aria-label="Alert volume over time; {{.PeakBar}} in the busiest interval">
+			{{range .Timeline}}{{if .H}}<rect x="{{.X}}" y="{{.Y}}" width="{{.W}}" height="{{.H}}"><title>{{fmttime .Start}} — {{.Count}}</title></rect>{{end}}{{end}}
+		</svg>
+		<div class="spark-axis text-muted"><span>{{fmttime .Source.FirstSeen}}</span><span>peak {{.PeakBar}}</span><span>{{fmttime .Source.LastSeen}}</span></div>
+	</div>
+</div>
+{{end}}
+
+<div class="two-col">
+	<div class="card">
+		<div class="card-header">
+			<span class="card-title">{{template "icon-list"}}Signatures tripped</span>
+			<span class="text-muted">{{len .Signatures}}</span>
+		</div>
+		{{if .Signatures}}
+		<div class="table-scroll">
+			<table data-search-target>
+				<thead><tr><th>SID</th><th>Signature</th><th class="num">Hits</th><th>Last</th></tr></thead>
+				<tbody data-paginate data-page-size="15">
+					{{range .Signatures}}
+					<tr>
+						<td class="mono"><a href="/sources?sid={{.SID}}" title="Show every source that tripped this rule">{{.SID}}</a></td>
+						<td>{{if .Signature}}{{.Signature}}{{else}}<span class="text-muted">unnamed</span>{{end}}{{if .Category}}<div class="text-muted">{{.Category}}</div>{{end}}</td>
+						<td class="num mono">{{num .Hits}}</td>
+						<td class="nowrap" title="{{fmttime .LastSeen}}"><span data-ts="{{isotime .LastSeen}}">{{fmttime .LastSeen}}</span></td>
+					</tr>
+					{{end}}
+				</tbody>
+			</table>
+		</div>
+		{{else}}<div class="card-body"><div class="empty">No signatures recorded.</div></div>{{end}}
+	</div>
+
+	<div class="card">
+		<div class="card-header">
+			<span class="card-title">{{template "icon-shield"}}Destination ports</span>
+			<span class="text-muted">{{len .Ports}}</span>
+		</div>
+		{{if .Ports}}
+		<div class="table-scroll">
+			<table data-search-target>
+				<thead><tr><th>Proto</th><th class="num">Port</th><th class="num">Hits</th><th>Last</th></tr></thead>
+				<tbody data-paginate data-page-size="15">
+					{{range .Ports}}
+					<tr>
+						<td class="mono">{{.Proto}}</td>
+						<td class="num mono"><a href="/sources?port={{.Port}}">{{.Port}}</a></td>
+						<td class="num mono">{{num .Hits}}</td>
+						<td class="nowrap" title="{{fmttime .LastSeen}}"><span data-ts="{{isotime .LastSeen}}">{{fmttime .LastSeen}}</span></td>
+					</tr>
+					{{end}}
+				</tbody>
+			</table>
+		</div>
+		{{else}}<div class="card-body"><div class="empty">No destination ports — ICMP or a protocol without them.</div></div>{{end}}
+	</div>
+</div>
+
+{{if .Actions}}
+<div class="card">
+	<div class="card-header"><span class="card-title">{{template "icon-ban"}}What was done</span></div>
+	<div class="table-scroll">
+		<table data-search-target>
+			<thead><tr><th>When</th><th>Who</th><th>Action</th><th>Reason</th><th>Result</th></tr></thead>
+			<tbody data-paginate data-page-size="20">
+				{{range .Actions}}
+				<tr>
+					<td class="nowrap" title="{{fmttime .Ts}}"><span data-ts="{{isotime .Ts}}">{{fmttime .Ts}}</span></td>
+					<td>{{.Actor}}</td>
+					<td><span class="badge{{if not .OK}} badge-danger{{end}}">{{.Action}}</span></td>
+					<td>{{.Reason}}</td>
+					<td class="{{if not .OK}}text-danger{{else}}text-muted{{end}}">{{.Result}}</td>
+				</tr>
+				{{end}}
+			</tbody>
+		</table>
+	</div>
+</div>
+{{end}}
+
+<div class="card">
+	<div class="card-header">
+		<span class="card-title">{{template "icon-activity"}}Alerts</span>
+		<span class="text-muted">{{if .Retained}}newest {{.EventsShown}} still stored — older ones have aged out under <a href="/settings?tab=ingest">retention</a>{{else}}{{.EventsShown}} alert{{if ne .EventsShown 1}}s{{end}}{{end}}</span>
+	</div>
+	{{if .Events}}
+	<div class="table-scroll">
+		<table data-search-target>
+			<thead><tr><th>When</th><th>Signature</th><th>Proto</th><th>Destination</th><th>Sev</th><th>Suricata action</th></tr></thead>
+			<tbody data-paginate data-page-size="50">
+				{{range .Events}}
+				<tr>
+					<td class="nowrap mono" title="{{fmttime .Ts}}">{{fmttime .Ts}}</td>
+					<td>
+						<span class="mono">{{.SID}}</span> {{.Signature}}
+						{{if .Context}}<div class="ctx">{{range .Context}}<span class="ctx-pair"><span class="ctx-key">{{.Key}}</span> <span class="mono">{{.Value}}</span></span>{{end}}</div>{{end}}
+					</td>
+					<td class="mono">{{.Proto}}{{if .AppProto}}/{{.AppProto}}{{end}}</td>
+					<td class="mono">{{.DestIP}}{{if .DestPort}}:{{.DestPort}}{{end}}</td>
+					<td>{{severityBadge .Severity}}</td>
+					<td class="mono">{{if .Action}}{{.Action}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</td>
+				</tr>
+				{{end}}
+			</tbody>
+		</table>
+	</div>
+	<div class="card-body">
+		<p class="text-muted hint">The last column is Suricata's own word for what it did. This sensor runs alert-only by design — Suricata never drops traffic here, so it will say <span class="mono">allowed</span> even for the worst of these. Dropping is nftables' job.</p>
+	</div>
+	{{else}}
+	<div class="card-body"><div class="empty">No stored alerts. This source's rollup survives, but its individual alerts have aged out.</div></div>
+	{{end}}
+</div>
+{{template "shell-close" .}}

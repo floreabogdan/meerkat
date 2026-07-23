@@ -1,0 +1,32 @@
+name: Feature request
+description: Suggest something meerkat should do.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        meerkat is **deliberately narrow**: one sensor's `eve.json`, rolled up per source
+        address, on the router itself. It is not a SIEM, it does not correlate across
+        sensors, and it will not make Suricata drop packets. Requests that fit that grain
+        are far more likely to land — see
+        [CONTRIBUTING.md](https://github.com/floreabogdan/meerkat/blob/main/CONTRIBUTING.md)
+        for the four decisions that are settled and what it would take to reopen one.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: The operational problem you have, not the solution you have in mind.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like meerkat to do?
+      description: How you imagine it working, and how it fits the per-source rollup the console is built around.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: What you do today — including grep over eve.json, or a full SIEM.

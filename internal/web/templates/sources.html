@@ -1,0 +1,159 @@
+{{template "shell-open" .}}
+<div class="page-top">
+	<span class="page-eyebrow">Triage</span>
+	<div class="breadcrumb"><span class="current">Sources</span></div>
+</div>
+<div class="page-header">
+	<div>
+		<h1>Sources</h1>
+		<div class="page-sub">Every address Suricata has alerted on, rolled up. One row per source, not one per alert — a reputation rule repeating itself six hundred times is one decision, not six hundred. The <a href="/">dashboard</a> has the overview; this is where triage happens.</div>
+	</div>
+	<div class="page-header-actions">
+		<span class="text-muted">{{.Pager.Summary}}</span>
+	</div>
+</div>
+
+{{template "ingest-warning" .Ingest}}
+{{if .Done}}<div class="card card-success"><div class="card-body">{{.Done}}</div></div>{{end}}
+{{if .Err}}<div class="card card-danger"><div class="card-body">{{.Err}}</div></div>{{end}}
+
+<div class="card">
+	<div class="card-header"><span class="card-title">{{template "icon-search"}}Filter</span></div>
+	<div class="card-body">
+		<form method="get" action="/sources" class="filter-bar">
+			<div class="field">
+				<label for="q">Search</label>
+				<input type="text" id="q" name="q" value="{{.Query}}" placeholder="address, AS name, country, city" autocomplete="off">
+			</div>
+			<div class="field">
+				<label for="country">Country</label>
+				<select id="country" name="country">
+					<option value="">Any</option>
+					{{range .Countries}}<option value="{{.Value}}"{{if eq .Value $.Country}} selected{{end}}>{{.Value}}{{if .Label}} — {{.Label}}{{end}} ({{.Count}})</option>{{end}}
+				</select>
+			</div>
+			<div class="field">
+				<label for="asn">AS</label>
+				<select id="asn" name="asn">
+					<option value="">Any</option>
+					{{range .ASNs}}<option value="{{.Value}}"{{if eq .Value $.ASN}} selected{{end}}>AS{{.Value}}{{if .Label}} {{.Label}}{{end}} ({{.Count}})</option>{{end}}
+				</select>
+			</div>
+			<div class="field">
+				<label for="port">Dest port</label>
+				<select id="port" name="port">
+					<option value="">Any</option>
+					{{range .Ports}}<option value="{{.Value}}"{{if eq .Value $.Port}} selected{{end}}>{{.Value}} ({{.Count}})</option>{{end}}
+				</select>
+			</div>
+			<div class="field">
+				<label for="severity">Severity</label>
+				<select id="severity" name="severity">
+					<option value="0"{{if eq .MaxSeverity 0}} selected{{end}}>Any</option>
+					<option value="1"{{if eq .MaxSeverity 1}} selected{{end}}>High only</option>
+					<option value="2"{{if eq .MaxSeverity 2}} selected{{end}}>Medium and above</option>
+					<option value="3"{{if eq .MaxSeverity 3}} selected{{end}}>Low and above</option>
+				</select>
+			</div>
+			<div class="field">
+				<label for="state">State</label>
+				<select id="state" name="state">
+					<option value="">Any</option>
+					<option value="new"{{if eq .State "new"}} selected{{end}}>New</option>
+					<option value="acknowledged"{{if eq .State "acknowledged"}} selected{{end}}>Acknowledged</option>
+					<option value="blocked"{{if eq .State "blocked"}} selected{{end}}>Blocked</option>
+					<option value="allowlisted"{{if eq .State "allowlisted"}} selected{{end}}>Allowlisted</option>
+				</select>
+			</div>
+			<div class="field">
+				<label for="window">Active in</label>
+				<select id="window" name="window">
+					{{range .Windows}}<option value="{{.Value}}"{{if eq .Value $.Window}} selected{{end}}>{{.Label}}</option>{{end}}
+				</select>
+			</div>
+			<div class="field">
+				<label for="min_events">Min alerts</label>
+				<input type="number" id="min_events" name="min_events" min="0" value="{{if .MinEvents}}{{.MinEvents}}{{end}}" placeholder="0">
+			</div>
+			{{if .SID}}<input type="hidden" name="sid" value="{{.SID}}">{{end}}
+			<input type="hidden" name="sort" value="{{.Sort}}">
+			<input type="hidden" name="dir" value="{{if .Desc}}desc{{else}}asc{{end}}">
+			<div class="filter-actions">
+				<button type="submit" class="btn btn-primary">{{template "icon-search"}}Apply</button>
+				{{if .Filtered}}<a class="btn" href="/">Clear</a>{{end}}
+			</div>
+		</form>
+		{{if .SID}}<p class="text-muted hint">Filtered to sources that tripped signature <span class="mono">{{.SID}}</span>. <a href="/">Remove</a></p>{{end}}
+	</div>
+</div>
+
+<div class="card">
+	<div class="card-header">
+		<span class="card-title">{{template "icon-sources"}}Sources</span>
+		<span class="text-muted">{{.Pager.Summary}}</span>
+	</div>
+	{{if .Sources}}
+	<form method="post" action="/sources/bulk" id="bulk-form" data-bulk>
+	<input type="hidden" name="back" value="{{rawURL .SelfURL}}">
+	<div class="table-scroll">
+		<table data-search-target>
+			<thead>
+				<tr>
+					<th class="bulk-cell"><input type="checkbox" data-bulk-all aria-label="Select all on this page"></th>
+					{{range .Columns}}
+					<th{{if .Numeric}} class="num"{{end}}>
+						<a class="th-sort{{if .Active}} is-sorted{{end}}" href="{{rawURL .URL}}"
+						   title="Sort by {{.Label}}">{{.Label}}{{if .Active}}<span class="sort-arrow" aria-hidden="true">{{if .Desc}}&#9662;{{else}}&#9652;{{end}}</span>{{end}}</a>
+					</th>
+					{{end}}
+					<th>State</th>
+				</tr>
+			</thead>
+			<tbody>
+				{{range .Sources}}
+				<tr>
+					<td class="bulk-cell"><input type="checkbox" name="ip" value="{{.IP}}" data-bulk-item aria-label="Select {{.IP}}"></td>
+					<td class="mono"><a href="/sources/{{.IP}}">{{.IP}}</a></td>
+					<td class="cell-where">{{template "source-identity" .}}</td>
+					<td class="num mono">{{num .EventCount}}</td>
+					<td class="num mono">{{.SigCount}}</td>
+					<td class="num mono">{{.PortCount}}</td>
+					<td>{{severityBadge .WorstSeverity}}</td>
+					<td class="nowrap" title="{{fmttime .FirstSeen}}"><span data-ts="{{isotime .FirstSeen}}">{{fmttime .FirstSeen}}</span></td>
+					<td class="nowrap" title="{{fmttime .LastSeen}}"><span data-ts="{{isotime .LastSeen}}">{{fmttime .LastSeen}}</span></td>
+					<td>{{stateBadge .State}}</td>
+				</tr>
+				{{end}}
+			</tbody>
+		</table>
+	</div>
+	<div class="bulk-bar" data-bulk-bar hidden>
+		<span class="bulk-count"><strong data-bulk-count>0</strong> selected</span>
+		<input type="text" name="reason" placeholder="Why? (recorded in the ledger)" aria-label="Reason">
+		<select name="ttl" aria-label="Block duration">
+			{{range .TTLs}}<option value="{{.Value}}">{{.Label}}</option>{{end}}
+		</select>
+		{{if .CanBlock}}
+		<button type="submit" name="action" value="block" class="btn btn-sm btn-danger"
+		        data-confirm="Block every selected source in nftables? That is one firewall call per address.">{{template "icon-ban"}}Block</button>
+		<button type="submit" name="action" value="unblock" class="btn btn-sm"
+		        data-confirm="Unblock every selected source?">Unblock</button>
+		{{end}}
+		<button type="submit" name="action" value="acknowledge" class="btn btn-sm">Acknowledge</button>
+		<button type="submit" name="action" value="allowlist" class="btn btn-sm"
+		        data-confirm="Allowlist every selected source? They will not be alerted on again.">Allowlist</button>
+	</div>
+	</form>
+	{{template "pager" .Pager}}
+	{{else}}
+	<div class="card-body">
+		<div class="empty">
+			{{if .Filtered}}No source matches this filter. <a href="/">Clear it</a> to see everything.
+			{{else if .Ingest.Running}}Nothing has alerted yet. meerkat is following eve.json and will fill this in as Suricata reports.
+			{{else}}No sources stored, and the reader is not running.{{end}}
+		</div>
+	</div>
+	{{end}}
+</div>
+<script src="/static/bulk.js" defer></script>
+{{template "shell-close" .}}

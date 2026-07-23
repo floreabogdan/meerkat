@@ -1,0 +1,38 @@
+{{template "shell-open" .}}
+<div class="page-top">
+	<span class="page-eyebrow">System</span>
+	<div class="breadcrumb"><span class="current">Profile</span></div>
+</div>
+<div class="page-header">
+	<div>
+		<h1>Profile</h1>
+		<div class="page-sub">Signed in as <strong>{{.Username}}</strong>.</div>
+	</div>
+</div>
+
+{{if .Saved}}<div class="card card-success"><div class="card-body">Password changed. Every other session for this account has been signed out.</div></div>{{end}}
+{{if .Err}}<div class="card card-danger"><div class="card-body">{{.Err}}</div></div>{{end}}
+
+<div class="card">
+	<div class="card-header"><span class="card-title">{{template "icon-shield"}}Change password</span></div>
+	<div class="card-body">
+		<form method="post" action="/profile/password">
+			<div class="field">
+				<label for="current">Current password</label>
+				<input type="password" id="current" name="current" autocomplete="current-password" required>
+			</div>
+			<div class="field">
+				<label for="password">New password</label>
+				<input type="password" id="password" name="password" autocomplete="new-password" minlength="8" required>
+				<small>At least 8 characters.</small>
+			</div>
+			<div class="field">
+				<label for="confirm">Confirm new password</label>
+				<input type="password" id="confirm" name="confirm" autocomplete="new-password" minlength="8" required>
+			</div>
+			<button type="submit" class="btn btn-primary">Change password</button>
+		</form>
+		<p class="text-muted hint">Changing it signs out every other session, since those were created under the old password.</p>
+	</div>
+</div>
+{{template "shell-close" .}}

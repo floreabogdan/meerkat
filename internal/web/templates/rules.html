@@ -1,0 +1,329 @@
+{{template "shell-open" .}}
+<div class="page-top">
+	<span class="page-eyebrow">Sensor</span>
+	<div class="breadcrumb"><span class="current">Rules</span></div>
+</div>
+<div class="page-header">
+	<div>
+		<h1>Rules</h1>
+		<div class="page-sub">What Suricata has installed, and what you have decided about it. Everything here only ever <em>alerts</em> &mdash; meerkat does not make the sensor drop, because on this router blocking is nftables' job.</div>
+	</div>
+	{{if .Status.Manageable}}
+	<div class="page-header-actions">
+		<form method="post" action="/rules/apply">
+			<input type="hidden" name="back" value="{{.BackURL}}">
+			<button type="submit" class="btn btn-primary"{{if .Status.Pending}} disabled{{end}}>{{template "icon-check"}}Apply changes</button>
+		</form>
+		<form method="post" action="/rules/apply">
+			<input type="hidden" name="back" value="{{.BackURL}}">
+			<input type="hidden" name="fetch" value="1">
+			<button type="submit" class="btn"{{if .Status.Pending}} disabled{{end}}>{{template "icon-refresh"}}Fetch latest</button>
+		</form>
+	</div>
+	{{end}}
+</div>
+
+{{if .Done}}<div class="card card-success"><div class="card-body">{{.Done}}</div></div>{{end}}
+{{if .Err}}<div class="card card-danger"><div class="card-body">{{.Err}}</div></div>{{end}}
+
+{{if not .Available}}
+<div class="card card-warning">
+	<div class="card-body">{{template "icon-alert"}} <strong>Rule management is not available on this console.</strong>
+	It needs a local Suricata to read and somewhere to stage changes. A console reading another box's database can still search and triage &mdash; it just cannot change that box's sensor.</div>
+</div>
+{{else}}
+
+{{if not .Status.Manageable}}
+<div class="card card-warning">
+	<div class="card-body">{{template "icon-alert"}} <strong>Read-only.</strong> {{.Status.Why}}
+	<p class="text-muted hint">The catalogue below is whatever meerkat last managed to read. Alerts are still being ingested and triaged as normal.</p></div>
+</div>
+{{end}}
+
+{{if .Status.Pending}}
+<div class="card {{if .Status.Stale}}card-danger{{else}}card-info{{end}}">
+	<div class="card-body">
+		{{if .Status.Stale}}
+		{{template "icon-alert"}} <strong>An apply has been waiting since {{fmttime .Status.PendingSince}} and nothing has picked it up.</strong>
+		<p class="text-muted hint">meerkat runs unprivileged: it cannot write <span class="mono">{{.Status.ConfDirPath}}</span>, run suricata-update, or open Suricata's control socket. A root helper does that when asked. Check it is installed with <span class="mono">systemctl status meerkat-apply.path</span>, or run <span class="mono">sudo meerkat rules apply</span> once by hand.</p>
+		{{else}}
+		{{template "icon-clock"}} <strong>Applying&hellip;</strong> requested {{fmttime .Status.PendingSince}}.
+		<p class="text-muted hint">suricata-update is downloading, merging and test-loading 50,000-odd rules. It takes a few minutes; reload for the result.</p>
+		{{end}}
+	</div>
+</div>
+{{end}}
+
+{{if .Status.Refused}}
+<div class="card card-warning">
+	<div class="card-body">{{template "icon-alert"}} <strong>{{num .Status.Refused}} of your decisions did not take.</strong>
+	<p class="text-muted hint">suricata-update keeps a disabled rule alive when an enabled rule depends on its flowbits, so a rule can be switched off and stay on. <a href="/rules?tab=changes">See which</a>.</p></div>
+</div>
+{{end}}
+
+<div class="stat-grid">
+	<div class="stat tint-primary">
+		<div class="stat-label">Installed</div>
+		<div class="stat-main"><span class="stat-icon">{{template "icon-sliders"}}</span><span class="stat-value">{{num .Status.Total}}</span></div>
+		<div class="stat-rule"></div>
+		<span class="stat-note">{{num .Status.Enabled}} enabled{{if .Status.IndexedAt}}, read {{fmttime .Status.IndexedAt}}{{end}}</span>
+	</div>
+	<div class="stat {{if .Status.SensorLive}}tint-success{{else}}tint-warning{{end}}">
+		<div class="stat-label">Control socket</div>
+		<div class="stat-main"><span class="stat-icon">{{template "icon-shield"}}</span><span class="stat-value">{{if .Status.SensorLive}}open{{else}}unreachable{{end}}</span></div>
+		<div class="stat-rule"></div>
+		<span class="stat-note">{{.Status.SensorDetail}}</span>
+	</div>
+	<div class="stat tint-secondary">
+		<div class="stat-label">Your decisions</div>
+		<div class="stat-main"><span class="stat-icon">{{template "icon-list"}}</span><span class="stat-value">{{num .Status.Policies}}</span></div>
+		<div class="stat-rule"></div>
+		{{if .Status.AutoRules}}<a class="stat-link" href="/rules?tab=catalogue&amp;policy=autoblock"><span class="arr" aria-hidden="true">&#8599;</span>{{num .Status.AutoRules}} block on sight</a>{{else}}<span class="stat-note">nothing blocks on sight</span>{{end}}
+	</div>
+	<div class="stat {{if .Status.Waiting}}tint-warning{{else}}tint-success{{end}}">
+		<div class="stat-label">Waiting to apply</div>
+		<div class="stat-main"><span class="stat-icon">{{template "icon-clock"}}</span><span class="stat-value">{{num .Status.Waiting}}</span></div>
+		<div class="stat-rule"></div>
+		{{if .Status.Waiting}}<a class="stat-link" href="/rules?tab=changes"><span class="arr" aria-hidden="true">&#8599;</span>review them</a>{{else}}<span class="stat-note">the sensor matches your policy</span>{{end}}
+	</div>
+</div>
+
+<div class="subnav">
+	<a href="/rules?tab=categories" class="{{if eq .Tab "categories"}}active{{end}}">Categories</a>
+	<a href="/rules?tab=catalogue" class="{{if eq .Tab "catalogue"}}active{{end}}">All rules</a>
+	<a href="/rules?tab=changes" class="{{if eq .Tab "changes"}}active{{end}}">Pending changes{{if .Status.Waiting}} ({{.Status.Waiting}}){{end}}</a>
+	<a href="/rules?tab=history" class="{{if eq .Tab "history"}}active{{end}}">History</a>
+</div>
+
+{{if eq .Tab "categories"}}
+<div class="card">
+	<div class="card-header">
+		<span class="card-title">{{template "icon-list"}}Categories</span>
+		<span class="text-muted">{{len .Categories}} installed</span>
+	</div>
+	<div class="card-body">
+		<p class="text-muted hint">A category is the rule's message prefix &mdash; the axis you actually have opinions about (&ldquo;I do not care about ICMP&rdquo;). Turning one off writes a single filter rather than a hundred, and the <strong>Alerts</strong> column is what it has really cost you, which is the number worth deciding on.</p>
+	</div>
+	{{if .Categories}}
+	<div class="table-scroll">
+		<table data-search-target>
+			<thead><tr><th>Category</th><th class="num">Rules</th><th class="num">On</th><th class="num">Alerts</th><th class="num">Sources</th><th>Last seen</th><th>Decision</th><th></th></tr></thead>
+			<tbody data-paginate data-page-size="25">
+				{{range .Categories}}
+				<tr>
+					<td><a href="/rules?tab=catalogue&amp;category={{.Name}}">{{.Name}}</a></td>
+					<td class="num mono">{{num .Total}}</td>
+					<td class="num mono">{{num .Enabled}}{{if .Partial}} <span class="badge badge-warning" title="Some rules in this category are on and some are off">partial</span>{{end}}</td>
+					<td class="num mono">{{if .Hits}}<a href="/sources?q=">{{num .Hits}}</a>{{else}}<span class="text-muted">0</span>{{end}}</td>
+					<td class="num mono">{{num .Sources}}</td>
+					<td class="text-muted">{{if .LastSeen.IsZero}}never{{else}}<span data-ts="{{isotime .LastSeen}}">{{fmttime .LastSeen}}</span>{{end}}</td>
+					<td>
+						{{if eq .Policy.State "disabled"}}<span class="badge badge-danger">off</span>
+						{{else if eq .Policy.State "enabled"}}<span class="badge badge-success">on</span>
+						{{else}}<span class="text-muted">&mdash;</span>{{end}}
+						{{if .Policy.AutoBlock}}<span class="badge badge-warning" title="A source tripping any rule in this category is pushed to nftably">blocks</span>{{end}}
+						{{if .Policy.Severity}}<span class="badge badge-info" title="Severity override">sev {{.Policy.Severity}}</span>{{end}}
+					</td>
+					<td class="row-actions">
+						<form method="post" action="/rules/policy" class="action-row">
+							<input type="hidden" name="scope" value="category">
+							<input type="hidden" name="key" value="{{.Name}}">
+							<input type="hidden" name="back" value="{{$.BackURL}}">
+							<input type="hidden" name="autoblock" value="{{if .Policy.AutoBlock}}1{{else}}0{{end}}">
+							<input type="hidden" name="severity" value="{{.Policy.Severity}}">
+							<input type="hidden" name="note" value="{{.Policy.Note}}">
+							<select name="state" aria-label="State for {{.Name}}">
+								<option value=""{{if eq .Policy.State ""}} selected{{end}}>Default</option>
+								<option value="disabled"{{if eq .Policy.State "disabled"}} selected{{end}}>Off</option>
+								<option value="enabled"{{if eq .Policy.State "enabled"}} selected{{end}}>On</option>
+							</select>
+							<button type="submit" class="btn btn-sm">Set</button>
+						</form>
+					</td>
+				</tr>
+				{{end}}
+			</tbody>
+		</table>
+	</div>
+	{{else}}
+	<div class="card-body"><div class="empty">{{if .Status.Readable}}The ruleset has not been indexed yet &mdash; it is read at startup and whenever the file changes.{{else}}meerkat cannot read {{.Status.RulesFile}}.{{end}}</div></div>
+	{{end}}
+</div>
+
+{{else if eq .Tab "catalogue"}}
+<div class="card">
+	<div class="card-body">
+		<form method="get" action="/rules" class="filter-bar">
+			<input type="hidden" name="tab" value="catalogue">
+			<div class="field">
+				<label for="q">Search</label>
+				<input type="text" id="q" name="q" value="{{.Query}}" placeholder="message text, or an exact SID" autocomplete="off">
+			</div>
+			<div class="field">
+				<label for="category">Category</label>
+				<select id="category" name="category">
+					<option value="">Any</option>
+					{{range .AllCategories}}<option value="{{.Name}}"{{if eq .Name $.Category}} selected{{end}}>{{.Name}} ({{num .Total}})</option>{{end}}
+				</select>
+			</div>
+			<div class="field">
+				<label for="state">In the ruleset</label>
+				<select id="state" name="state">
+					<option value="">Any</option>
+					<option value="enabled"{{if eq .State "enabled"}} selected{{end}}>Enabled</option>
+					<option value="disabled"{{if eq .State "disabled"}} selected{{end}}>Disabled</option>
+				</select>
+			</div>
+			<div class="field">
+				<label for="policy">Your decision</label>
+				<select id="policy" name="policy">
+					<option value="">Any</option>
+					<option value="any"{{if eq .Policy "any"}} selected{{end}}>Anything set</option>
+					<option value="disabled"{{if eq .Policy "disabled"}} selected{{end}}>Turned off</option>
+					<option value="enabled"{{if eq .Policy "enabled"}} selected{{end}}>Turned on</option>
+					<option value="autoblock"{{if eq .Policy "autoblock"}} selected{{end}}>Blocks on sight</option>
+					<option value="severity"{{if eq .Policy "severity"}} selected{{end}}>Severity overridden</option>
+				</select>
+			</div>
+			<div class="field">
+				<label for="firing">Activity</label>
+				<select id="firing" name="firing">
+					<option value="">All rules</option>
+					<option value="1"{{if .Firing}} selected{{end}}>Only ones that have fired</option>
+				</select>
+			</div>
+			<div class="filter-actions">
+				<button type="submit" class="btn btn-primary">{{template "icon-search"}}Apply</button>
+				{{if .Filtered}}<a class="btn" href="{{rawURL .ClearURL}}">Clear</a>{{end}}
+			</div>
+		</form>
+	</div>
+</div>
+
+<div class="card">
+	<div class="card-header">
+		<span class="card-title">{{template "icon-list"}}Catalogue</span>
+		<span class="text-muted">{{num .Total}} matching</span>
+	</div>
+	{{if .Rules}}
+	<div class="table-scroll">
+		<table>
+			<thead><tr>
+				{{range .Columns}}<th{{if .Numeric}} class="num"{{end}}><a href="{{rawURL .URL}}"{{if .Active}} class="sorted"{{end}}>{{.Label}}{{if .Active}}{{if .Desc}} &darr;{{else}} &uarr;{{end}}{{end}}</a></th>{{end}}
+				<th>State</th><th>Decision</th><th></th>
+			</tr></thead>
+			<tbody>
+				{{range .Rules}}
+				<tr>
+					<td class="mono"><a href="/rules/{{.SID}}">{{.SID}}</a></td>
+					<td>{{.Msg}}{{if ne .Action "alert"}} <span class="badge badge-danger" title="This rule's action in the ruleset is not 'alert'">{{.Action}}</span>{{end}}</td>
+					<td class="text-muted">{{.Category}}</td>
+					<td class="num mono">{{if .Hits}}<a href="/sources?sid={{.SID}}" title="Sources that tripped this rule">{{num .Hits}}</a>{{else}}<span class="text-muted">0</span>{{end}}</td>
+					<td>{{if .Enabled}}<span class="badge badge-success">on</span>{{else}}<span class="badge">off</span>{{end}}</td>
+					<td>
+						{{if eq .Policy.State "disabled"}}<span class="badge badge-danger">off</span>
+						{{else if eq .Policy.State "enabled"}}<span class="badge badge-success">on</span>{{end}}
+						{{if .Policy.AutoBlock}}<span class="badge badge-warning">blocks</span>{{end}}
+						{{if .Policy.Severity}}<span class="badge badge-info">sev {{.Policy.Severity}}</span>{{end}}
+						{{if and (not .Policy.Set) .CategoryPolicy.Set}}<span class="text-muted hint" title="Inherited from the category decision">via {{.CategoryPolicy.Key}}</span>{{end}}
+					</td>
+					<td class="row-actions">
+						<form method="post" action="/rules/policy" class="action-row">
+							<input type="hidden" name="scope" value="sid">
+							<input type="hidden" name="key" value="{{.SID}}">
+							<input type="hidden" name="back" value="{{$.BackURL}}">
+							<input type="hidden" name="autoblock" value="{{if .Policy.AutoBlock}}1{{else}}0{{end}}">
+							<input type="hidden" name="severity" value="{{.Policy.Severity}}">
+							<input type="hidden" name="note" value="{{.Policy.Note}}">
+							<select name="state" aria-label="State for rule {{.SID}}">
+								<option value=""{{if eq .Policy.State ""}} selected{{end}}>Default</option>
+								<option value="disabled"{{if eq .Policy.State "disabled"}} selected{{end}}>Off</option>
+								<option value="enabled"{{if eq .Policy.State "enabled"}} selected{{end}}>On</option>
+							</select>
+							<button type="submit" class="btn btn-sm">Set</button>
+						</form>
+					</td>
+				</tr>
+				{{end}}
+			</tbody>
+		</table>
+	</div>
+	{{template "pager" .Pager}}
+	{{else}}
+	<div class="card-body"><div class="empty">{{if .Status.Total}}No rules match those filters.{{else}}The ruleset has not been indexed yet.{{end}}</div></div>
+	{{end}}
+</div>
+
+{{else if eq .Tab "changes"}}
+<div class="card">
+	<div class="card-header">
+		<span class="card-title">{{template "icon-activity"}}Your decisions, measured against the running ruleset</span>
+	</div>
+	<div class="card-body">
+		<p class="text-muted hint">meerkat does not take its own word for it. After every apply the built ruleset is read back from disk and each decision is compared against what the sensor actually holds &mdash; the same way a block is reconciled against nftables rather than remembered.</p>
+	</div>
+	{{if .Drifts}}
+	<div class="table-scroll">
+		<table>
+			<thead><tr><th>Target</th><th>Decision</th><th>Status</th><th>Reason</th><th>Set by</th><th>When</th></tr></thead>
+			<tbody data-paginate data-page-size="50">
+				{{range .Drifts}}
+				<tr>
+					<td class="mono">{{if eq .Policy.Scope "sid"}}<a href="/rules/{{.Policy.Key}}">{{.Policy.Key}}</a>{{else}}{{.Policy.Key}}{{end}}</td>
+					<td>{{.Policy.State}}</td>
+					<td>
+						{{if eq .Status "satisfied"}}<span class="badge badge-success">applied</span>
+						{{else if eq .Status "pending"}}<span class="badge badge-warning">waiting</span>
+						{{else if eq .Status "refused"}}<span class="badge badge-danger">not taken</span>
+						{{else}}<span class="badge">unknown rule</span>{{end}}
+						{{if .Detail}}<div class="text-muted hint">{{.Detail}}</div>{{end}}
+					</td>
+					<td class="text-muted">{{.Policy.Note}}</td>
+					<td class="text-muted">{{.Policy.Actor}}</td>
+					<td class="text-muted"><span data-ts="{{isotime .Policy.UpdatedAt}}">{{fmttime .Policy.UpdatedAt}}</span></td>
+				</tr>
+				{{end}}
+			</tbody>
+		</table>
+	</div>
+	{{else}}
+	<div class="card-body"><div class="empty">Nothing has been turned on or off. The sensor is running the ruleset exactly as it ships.</div></div>
+	{{end}}
+</div>
+
+{{else}}
+<div class="card">
+	<div class="card-header">
+		<span class="card-title">{{template "icon-clock"}}Ruleset history</span>
+	</div>
+	<div class="card-body">
+		<p class="text-muted hint">Every change to what the sensor reports, including the ones that failed. A ruleset change alters what the network tells you, so it is recorded the same way a firewall change is.</p>
+	</div>
+	{{if .Runs}}
+	<div class="table-scroll">
+		<table>
+			<thead><tr><th>When</th><th>What</th><th>Who</th><th>Result</th><th class="num">Rules</th><th>Detail</th></tr></thead>
+			<tbody data-paginate data-page-size="25">
+				{{range .Runs}}
+				<tr>
+					<td class="text-muted"><span data-ts="{{isotime .FinishedAt}}">{{fmttime .FinishedAt}}</span></td>
+					<td>{{.Kind}}{{if .Reason}}<div class="text-muted hint">{{.Reason}}</div>{{end}}</td>
+					<td class="text-muted">{{.Actor}}</td>
+					<td>
+						{{if .OK}}<span class="badge badge-success">ok</span>{{else}}<span class="badge badge-danger">failed</span>{{end}}
+						{{if .Reloaded}}<span class="badge badge-info" title="Suricata rebuilt its detection engine without restarting">reloaded</span>{{end}}
+					</td>
+					<td class="num mono">{{if .RulesTotal}}{{num .RulesTotal}}{{if .Added}} <span class="badge badge-success">+{{.Added}}</span>{{end}}{{if .Removed}} <span class="badge">&minus;{{.Removed}}</span>{{end}}{{else}}&mdash;{{end}}</td>
+					<td class="text-muted">{{if .Error}}{{.Step}}: {{.Error}}{{else}}{{.Detail}}{{end}}</td>
+				</tr>
+				{{end}}
+			</tbody>
+		</table>
+	</div>
+	{{else}}
+	<div class="card-body"><div class="empty">No ruleset changes yet.</div></div>
+	{{end}}
+</div>
+{{end}}
+{{end}}
+{{template "shell-close" .}}

@@ -1,0 +1,138 @@
+{{template "shell-open" .}}
+<div class="page-top">
+	<span class="page-eyebrow">Sensor</span>
+	<div class="breadcrumb"><a href="/rules">Rules</a><span class="sep">/</span><span class="current">{{.Rule.SID}}</span></div>
+</div>
+<div class="page-header">
+	<div>
+		<h1 class="mono">{{.Rule.SID}}</h1>
+		<div class="page-sub">{{.Rule.Msg}}</div>
+	</div>
+	<div class="page-header-actions">
+		{{if .Rule.Enabled}}<span class="badge badge-success">enabled in the ruleset</span>{{else}}<span class="badge">disabled in the ruleset</span>{{end}}
+		{{if ne .Rule.Action "alert"}}<span class="badge badge-danger" title="This rule's action is not 'alert'">action: {{.Rule.Action}}</span>{{end}}
+	</div>
+</div>
+
+{{if .Done}}<div class="card card-success"><div class="card-body">{{.Done}}</div></div>{{end}}
+{{if .Err}}<div class="card card-danger"><div class="card-body">{{.Err}}</div></div>{{end}}
+
+<div class="two-col">
+	<div class="card">
+		<div class="card-header"><span class="card-title">{{template "icon-info"}}The rule</span></div>
+		<div class="card-body">
+			<dl class="kv-grid">
+				<dt>Category</dt><dd><a href="/rules?tab=catalogue&amp;category={{.Rule.Category}}">{{.Rule.Category}}</a></dd>
+				<dt>Classtype</dt><dd>{{if .Rule.Classtype}}{{.Rule.Classtype}}{{else}}<span class="text-muted">&mdash;</span>{{end}}</dd>
+				<dt>Protocol</dt><dd class="mono">{{.Rule.Proto}}</dd>
+				<dt>Revision</dt><dd class="mono">{{.Rule.Rev}}{{if .Rule.GID}} (gid {{.Rule.GID}}){{end}}</dd>
+				{{if .Rule.ETSeverity}}<dt>Vendor rating</dt><dd>{{.Rule.ETSeverity}}</dd>{{end}}
+				{{if .Rule.RuleCreated}}<dt>Written</dt><dd class="mono">{{.Rule.RuleCreated}}</dd>{{end}}
+				{{if .Rule.RuleUpdated}}<dt>Last revised</dt><dd class="mono">{{.Rule.RuleUpdated}}</dd>{{end}}
+			</dl>
+			<p class="text-muted hint">The vendor rating is Emerging Threats' own metadata, which is a different axis from the numeric severity Suricata puts in each alert. Both are shown; neither is invented.</p>
+		</div>
+	</div>
+
+	<div class="card">
+		<div class="card-header"><span class="card-title">{{template "icon-activity"}}What it has cost</span></div>
+		<div class="card-body">
+			{{if .Rule.Hits}}
+			<dl class="kv-grid">
+				<dt>Alerts</dt><dd class="mono"><a href="/sources?sid={{.Rule.SID}}">{{num .Rule.Hits}}</a></dd>
+				<dt>Last fired</dt><dd><span data-ts="{{isotime .Rule.LastSeen}}">{{fmttime .Rule.LastSeen}}</span></dd>
+				<dt>Sources</dt><dd class="mono">{{len .Sources}}{{if eq (len .Sources) 25}}+{{end}}</dd>
+			</dl>
+			<p class="text-muted hint">A rule firing on hundreds of addresses is a reputation feed restating itself; one firing on two is worth reading. That difference is the whole reason this page joins the catalogue to what has actually happened.</p>
+			{{else}}
+			<div class="empty">This rule has never fired here.</div>
+			{{end}}
+		</div>
+	</div>
+</div>
+
+<div class="card">
+	<div class="card-header">
+		<span class="card-title">{{template "icon-sliders"}}Your decision</span>
+		{{if .Rule.CategoryPolicy.Set}}<span class="text-muted">the category {{.Rule.CategoryPolicy.Key}} also has one</span>{{end}}
+	</div>
+	<div class="card-body">
+		<form method="post" action="/rules/policy">
+			<input type="hidden" name="scope" value="sid">
+			<input type="hidden" name="key" value="{{.Rule.SID}}">
+			<input type="hidden" name="back" value="/rules/{{.Rule.SID}}">
+
+			<div class="field">
+				<label for="state">In the ruleset</label>
+				<select id="state" name="state">
+					<option value=""{{if eq .Rule.Policy.State ""}} selected{{end}}>Leave as the ruleset ships it</option>
+					<option value="disabled"{{if eq .Rule.Policy.State "disabled"}} selected{{end}}>Disabled &mdash; stop this rule alerting</option>
+					<option value="enabled"{{if eq .Rule.Policy.State "enabled"}} selected{{end}}>Enabled &mdash; turn it on</option>
+				</select>
+				<small>Takes effect at the next apply, which rebuilds the ruleset.</small>
+			</div>
+
+			<div class="field">
+				<label for="severity">Severity</label>
+				<select id="severity" name="severity">
+					{{range .Severities}}<option value="{{.Value}}"{{if eq .Value $.Rule.Policy.Severity}} selected{{end}}>{{.Label}}</option>{{end}}
+				</select>
+				<small>Applies immediately, to alerts from now on. Stored alerts keep the severity meerkat recorded at the time.</small>
+			</div>
+
+			<div class="field">
+				<label for="autoblock">When it fires</label>
+				<select id="autoblock" name="autoblock">
+					<option value="0"{{if not .Rule.Policy.AutoBlock}} selected{{end}}>Just record it</option>
+					<option value="1"{{if .Rule.Policy.AutoBlock}} selected{{end}}>Block the source</option>
+				</select>
+				<small>Blocking means meerkat pushes the address to nftably, exactly as clicking Block does &mdash; never a Suricata drop rule. It lands in the actions ledger with <span class="mono">auto</span> as the actor.</small>
+			</div>
+
+			<div class="field">
+				<label for="autoblock_ttl">Block for</label>
+				<select id="autoblock_ttl" name="autoblock_ttl">
+					{{range .TTLs}}<option value="{{.Value}}"{{if eq .Secs $.Rule.Policy.AutoBlockTTL}} selected{{end}}>{{.Label}}</option>{{end}}
+				</select>
+			</div>
+
+			<div class="field">
+				<label for="note">Reason</label>
+				<input type="text" id="note" name="note" value="{{.Rule.Policy.Note}}" placeholder="why — this ends up as a comment in /etc/suricata/disable.conf" maxlength="160">
+			</div>
+
+			<button type="submit" class="btn btn-primary">Save decision</button>
+		</form>
+
+		{{if not .Status.AutoBlock}}
+		<p class="text-muted hint">{{template "icon-alert"}} Blocking on sight is switched off globally under <a href="/settings?tab=suricata">Settings &rarr; Suricata</a>, so a rule set to block will record the decision but nothing will act on it.</p>
+		{{end}}
+	</div>
+</div>
+
+{{if .Sources}}
+<div class="card">
+	<div class="card-header">
+		<span class="card-title">{{template "icon-sources"}}Sources that tripped it</span>
+		<a class="section-link" href="/sources?sid={{.Rule.SID}}"><span class="arr" aria-hidden="true">&#8599;</span>all of them</a>
+	</div>
+	<div class="table-scroll">
+		<table>
+			<thead><tr><th>Source</th><th>Where</th><th class="num">Alerts</th><th>Worst</th><th>Last seen</th><th>State</th></tr></thead>
+			<tbody data-paginate data-page-size="25">
+				{{range .Sources}}
+				<tr>
+					<td class="mono"><a href="/sources/{{.IP}}">{{.IP}}</a></td>
+					<td class="text-muted">{{flag .Country}} {{if .CountryName}}{{.CountryName}}{{end}}{{if .ASOrg}} &middot; {{.ASOrg}}{{end}}</td>
+					<td class="num mono">{{num .EventCount}}</td>
+					<td>{{severityBadge .WorstSeverity}}</td>
+					<td class="text-muted"><span data-ts="{{isotime .LastSeen}}">{{fmttime .LastSeen}}</span></td>
+					<td>{{stateBadge .State}}</td>
+				</tr>
+				{{end}}
+			</tbody>
+		</table>
+	</div>
+</div>
+{{end}}
+{{template "shell-close" .}}

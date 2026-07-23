@@ -1,0 +1,375 @@
+{{template "shell-open" .}}
+<div class="page-top">
+	<span class="page-eyebrow">System</span>
+	<div class="breadcrumb"><span class="current">Settings</span></div>
+</div>
+<div class="page-header">
+	<div>
+		<h1>Settings</h1>
+		<div class="page-sub">What meerkat reads, how long it keeps it, how it enriches it, where a block would go, and what it publishes.</div>
+	</div>
+</div>
+
+{{if .Saved}}<div class="card card-success"><div class="card-body">Saved.{{if eq .Saved "ingest"}} Ingest changes take effect when meerkat restarts.{{end}}{{if eq .Saved "threats"}} Publishing changes take effect when meerkat restarts.{{end}}{{if eq .Saved "threatstest"}} Test detection published.{{end}}</div></div>{{end}}
+{{if .Err}}<div class="card card-danger"><div class="card-body">{{.Err}}</div></div>{{end}}
+
+{{if .WideOpen}}
+<div class="card card-warning">
+	<div class="card-body">{{template "icon-alert"}} <strong>meerkat is reachable from any IP and has no TLS.</strong>
+	Anyone who can reach this port sees the login in the clear. Narrow it under Access control, or bind it to loopback and reach it over an SSH tunnel.</div>
+</div>
+{{end}}
+
+<div class="subnav">
+	<a href="/settings?tab=ingest" class="{{if eq .Tab "ingest"}}active{{end}}">Ingest &amp; retention</a>
+	<a href="/settings?tab=geoip" class="{{if eq .Tab "geoip"}}active{{end}}">Enrichment</a>
+	<a href="/settings?tab=blocking" class="{{if eq .Tab "blocking"}}active{{end}}">Blocking</a>
+	<a href="/settings?tab=suricata" class="{{if eq .Tab "suricata"}}active{{end}}">Suricata</a>
+	<a href="/settings?tab=threats" class="{{if eq .Tab "threats"}}active{{end}}">Threat map</a>
+	<a href="/settings?tab=access" class="{{if eq .Tab "access"}}active{{end}}">Access control</a>
+	<a href="/settings?tab=theme" class="{{if eq .Tab "theme"}}active{{end}}">Appearance</a>
+</div>
+
+{{if eq .Tab "ingest"}}
+<div class="card">
+	<div class="card-header"><span class="card-title">{{template "icon-info"}}This router</span></div>
+	<div class="card-body">
+		<form method="post" action="/settings/identity">
+			<div class="field">
+				<label for="label">Router label</label>
+				<input type="text" id="label" name="label" value="{{.Settings.RouterLabel}}" placeholder="edge1">
+				<small>Shown in the title bar and on every alert meerkat sends.</small>
+			</div>
+			<div class="field">
+				<label for="listen">Listen address</label>
+				<input type="text" id="listen" name="listen" value="{{.Settings.ListenAddr}}" placeholder="0.0.0.0:8100">
+				<small>Takes effect on restart. Use <span class="mono">127.0.0.1:8100</span> to bind loopback only and reach meerkat over an SSH tunnel.</small>
+			</div>
+			<button type="submit" class="btn btn-primary">Save</button>
+		</form>
+	</div>
+</div>
+
+<div class="card">
+	<div class="card-header"><span class="card-title">{{template "icon-activity"}}Ingest &amp; retention</span></div>
+	<div class="card-body">
+		<form method="post" action="/settings/ingest">
+			<div class="field">
+				<label for="eve_path">eve.json path</label>
+				<input type="text" id="eve_path" name="eve_path" value="{{.Settings.EvePath}}" placeholder="/var/log/suricata/eve.json">
+				<small>meerkat follows this file the way <span class="mono">tail -F</span> does: it survives rotation, truncation and Suricata being stopped. The file is often mode 0640 root:adm, so meerkat's account needs to be in the owning group.</small>
+			</div>
+			<div class="field">
+				<label for="state_path">Read-offset file</label>
+				<input type="text" id="state_path" name="state_path" value="{{.Settings.StatePath}}" placeholder="/var/lib/meerkat/tail.state">
+				<small>Where the read position is remembered, so a restart neither replays the file nor skips what arrived while meerkat was down. Leave blank to always resume at the end.</small>
+			</div>
+			<div class="field">
+				<label for="retention_days">Keep alerts for (days)</label>
+				<input type="number" id="retention_days" name="retention_days" min="1" max="3650" value="{{.Settings.RetentionDays}}">
+				<small>Individual alerts older than this are deleted. The per-source rollup survives — a source you have triaged is a decision, and decisions outlive the alerts that prompted them.</small>
+			</div>
+			<div class="field">
+				<label for="max_events">Hard cap on stored alerts</label>
+				<input type="number" id="max_events" name="max_events" min="1000" value="{{.Settings.MaxEvents}}">
+				<small>A backstop for a flood. A busy sensor can produce 300,000 alerts a day, which would fill the disk well inside the retention window; past this many, the oldest go early.</small>
+			</div>
+			<button type="submit" class="btn btn-primary">Save</button>
+		</form>
+	</div>
+</div>
+
+<div class="card">
+	<div class="card-header"><span class="card-title">{{template "icon-activity"}}Reader status</span></div>
+	<div class="card-body">
+		<dl class="kv-grid">
+			<dt>Running</dt><dd>{{if .Ingest.Running}}<span class="badge badge-success">yes</span>{{else}}<span class="badge badge-danger">no</span>{{end}}</dd>
+			<dt>Lines read</dt><dd class="mono">{{num .Ingest.LinesRead}}</dd>
+			<dt>Alerts kept</dt><dd class="mono">{{num .Ingest.Alerts}}</dd>
+			<dt>Alerts written</dt><dd class="mono">{{num .Ingest.Written}}</dd>
+			<dt>Unparseable lines</dt><dd class="mono">{{num .Ingest.ParseErrors}}</dd>
+			<dt>Last line</dt><dd>{{if .Ingest.LastLineAt}}<span data-ts="{{isotime .Ingest.LastLineAt}}">{{fmttime .Ingest.LastLineAt}}</span>{{else}}<span class="text-muted">never</span>{{end}}</dd>
+			<dt>Last alert</dt><dd>{{if .Ingest.LastAlertAt}}<span data-ts="{{isotime .Ingest.LastAlertAt}}">{{fmttime .Ingest.LastAlertAt}}</span>{{else}}<span class="text-muted">never</span>{{end}}</dd>
+			{{if .Ingest.LastError}}<dt>Last problem</dt><dd class="text-danger mono">{{.Ingest.LastError}}</dd>{{end}}
+			<dt>Stored now</dt><dd class="mono">{{num .Counts.Events}} alerts, {{num .Counts.Sources}} sources</dd>
+		</dl>
+		<p class="text-muted hint">"Lines read" counts every record in eve.json, not just alerts — flow and stats records are the overwhelming majority and are rejected before they cost a JSON decode.</p>
+	</div>
+</div>
+{{end}}
+
+{{if eq .Tab "geoip"}}
+<div class="card">
+	<div class="card-header"><span class="card-title">{{template "icon-globe"}}Enrichment</span></div>
+	<div class="card-body">
+		<p class="text-muted">Country, city and autonomous system come from local MaxMind-format <span class="mono">.mmdb</span> files. Lookups never leave the box; the only thing that ever reaches the network is the monthly download below, and it is off unless you turn it on.</p>
+		<p>Currently loaded: <span class="mono">{{if .GeoStatus}}{{.GeoStatus}}{{else}}none{{end}}</span></p>
+		<form method="post" action="/settings/geoip">
+			<div class="field">
+				<label for="geoip_dir">Database directory</label>
+				<input type="text" id="geoip_dir" name="geoip_dir" value="{{.Settings.GeoIPDir}}" placeholder="/var/lib/meerkat">
+				<small>Where the <span class="mono">.mmdb</span> files live. Blank means meerkat's data directory.</small>
+			</div>
+			<div class="field">
+				<label for="asn_db">ASN database</label>
+				<input type="text" id="asn_db" name="asn_db" value="{{.Settings.GeoIPASNDB}}" placeholder="{{.ASNPath}}">
+				<small>Blank uses <span class="mono">{{.ASNPath}}</span>.</small>
+			</div>
+			<div class="field">
+				<label for="country_db">Country database</label>
+				<input type="text" id="country_db" name="country_db" value="{{.Settings.GeoIPCountryDB}}" placeholder="{{.CountryPath}}">
+				<small>Blank uses <span class="mono">{{.CountryPath}}</span>.</small>
+			</div>
+			<div class="field">
+				<label for="city_db">City database</label>
+				<input type="text" id="city_db" name="city_db" value="{{.Settings.GeoIPCityDB}}" placeholder="{{.CityPath}}">
+				<small>The only one that carries coordinates. Without it a source has a country but no position, so it cannot be plotted on the threat map.</small>
+			</div>
+			<div class="field">
+				<label class="check-label"><input type="checkbox" name="autoupdate"{{if .Settings.GeoIPAutoUpdate}} checked{{end}}> Download and refresh DB-IP Lite monthly</label>
+				<small>Fetches over HTTPS from db-ip.com at startup when the local copy is stale, validates it, and only then replaces the working file. A failed refresh keeps the old database — a month-old answer beats none.</small>
+			</div>
+			<button type="submit" class="btn btn-primary">Save</button>
+		</form>
+	</div>
+</div>
+{{end}}
+
+{{if eq .Tab "blocking"}}
+<div class="card">
+	<div class="card-header"><span class="card-title">{{template "icon-ban"}}Blocking</span></div>
+	<div class="card-body">
+		<p class="text-muted">meerkat does not block anything itself, and Suricata here is deliberately alert-only — left at its defaults it dropped 9.6% of transit traffic on this router, and not because of any rule. Dropping is nftables' job, so a block from meerkat is a call to nftably's firewall API.</p>
+		<form method="post" action="/settings/nftably">
+			<div class="field">
+				<label for="nftably_url">nftably URL</label>
+				<input type="text" id="nftably_url" name="nftably_url" value="{{.Settings.NftablyURL}}" placeholder="http://127.0.0.1:8099">
+				<small>Where nftably is listening. Loopback is right when both run on the same router.</small>
+			</div>
+			<div class="field">
+				<label for="nftably_token">API token</label>
+				<input type="password" id="nftably_token" name="nftably_token" placeholder="{{if .Settings.NftablyToken}}unchanged — leave blank to keep it{{else}}paste the token from nftably{{end}}" autocomplete="off">
+				<small>Mint it in nftably under <strong>Settings → Automation API</strong>. Until a token exists there, its <span class="mono">/api/block</span> answers 404 rather than 401 — the feature is not merely locked, it is off. Leave blank to keep the token already stored.</small>
+			</div>
+			<button type="submit" class="btn btn-primary">Save</button>
+		</form>
+		<p class="text-muted hint">Run <span class="mono">meerkat doctor</span> after saving: it probes this endpoint and reports exactly which of "not configured", "no token", "wrong token" or "API disabled" you are looking at.</p>
+	</div>
+</div>
+{{end}}
+
+{{if eq .Tab "suricata"}}
+<div class="card">
+	<div class="card-header"><span class="card-title">{{template "icon-sliders"}}The sensor</span></div>
+	<div class="card-body">
+		{{if .RulesManaged}}
+		<dl class="kv-grid">
+			<dt>Installed rules</dt><dd class="mono">{{num .RuleStatus.Total}} ({{num .RuleStatus.Enabled}} enabled)</dd>
+			<dt>Sensor</dt><dd>{{if .RuleStatus.SensorLive}}running &mdash; rules can be reloaded without a restart{{else}}not running{{end}}</dd>
+			<dt>suricata-update</dt><dd class="mono">{{if .RuleStatus.UpdaterPath}}{{.RuleStatus.UpdaterPath}}{{else}}not installed{{end}}</dd>
+			<dt>Staging</dt><dd class="mono">{{.RuleStatus.StagingPath}}</dd>
+			<dt>Last applied</dt><dd>{{if .RuleStatus.LastUpdate.IsZero}}never{{else}}{{fmttime .RuleStatus.LastUpdate}}{{end}}</dd>
+		</dl>
+		{{if not .RuleStatus.Manageable}}<p class="text-muted hint">{{template "icon-alert"}} {{.RuleStatus.Why}}</p>{{end}}
+		{{else}}
+		<div class="empty">Rule management is not running on this console.</div>
+		{{end}}
+		<p class="text-muted hint">meerkat runs unprivileged and cannot write these files itself. It renders the filter files into its own staging directory and leaves a request; the <span class="mono">meerkat-apply</span> systemd unit does the privileged part as root and writes back what happened. That split is why the service needs no capabilities at all.</p>
+	</div>
+</div>
+
+<div class="card">
+	<div class="card-header"><span class="card-title">{{template "icon-settings"}}Where things live</span></div>
+	<div class="card-body">
+		<form method="post" action="/settings/suricata">
+			<div class="field">
+				<label for="rules_path">Built ruleset</label>
+				<input type="text" id="rules_path" name="rules_path" value="{{.Settings.SuricataRulesPath}}" placeholder="/var/lib/suricata/rules/suricata.rules">
+				<small>The merged file Suricata loads. meerkat reads it to build the catalogue &mdash; so what the console says about a rule is what is in this file, not what meerkat remembers asking for.</small>
+			</div>
+			<div class="field">
+				<label for="conf_dir">Suricata config directory</label>
+				<input type="text" id="conf_dir" name="conf_dir" value="{{.Settings.SuricataConfDir}}" placeholder="/etc/suricata">
+				<small>Where <span class="mono">disable.conf</span> and <span class="mono">enable.conf</span> are installed. Anything already there that meerkat did not write is copied to <span class="mono">.pre-meerkat</span> the first time, and adopted into the policy so it is not silently switched back on.</small>
+			</div>
+			<div class="field">
+				<label for="data_dir">Suricata data directory</label>
+				<input type="text" id="data_dir" name="data_dir" value="{{.Settings.SuricataDataDir}}" placeholder="/var/lib/suricata">
+			</div>
+			<div class="field">
+				<label for="socket">Control socket</label>
+				<input type="text" id="socket" name="socket" value="{{.Settings.SuricataSocket}}" placeholder="/var/run/suricata-command.socket">
+				<small>How a rebuilt ruleset reaches the running sensor without restarting it. Suricata sits inline on NFQUEUE here, so a restart is a traffic event; a reload is not. Needs <span class="mono">unix-command: enabled: yes</span> in suricata.yaml.</small>
+			</div>
+
+			<div class="field-row">
+				<div class="field">
+					<label for="auto_update">Fetch new rules automatically</label>
+					<select id="auto_update" name="auto_update">
+						<option value="0"{{if not .Settings.RulesAutoUpdate}} selected{{end}}>No &mdash; I will do it myself</option>
+						<option value="1"{{if .Settings.RulesAutoUpdate}} selected{{end}}>Yes, daily</option>
+					</select>
+					<small>Runs suricata-update against your configured sources, applies your policy, and reloads the sensor.</small>
+				</div>
+				<div class="field">
+					<label for="update_hour">At (local time)</label>
+					<select id="update_hour" name="update_hour">
+						{{range .UpdateHours}}<option value="{{.}}"{{if eq . $.Settings.RulesUpdateHour}} selected{{end}}>{{printf "%02d:00" .}}</option>{{end}}
+					</select>
+				</div>
+			</div>
+
+			<div class="field-row">
+				<div class="field">
+					<label for="autoblock">Rules may block on sight</label>
+					<select id="autoblock" name="autoblock">
+						<option value="0"{{if not .Settings.AutoBlockEnabled}} selected{{end}}>No &mdash; only record</option>
+						<option value="1"{{if .Settings.AutoBlockEnabled}} selected{{end}}>Yes, for rules I have marked</option>
+					</select>
+					<small>The master switch for &ldquo;always block this&rdquo;. It is a standing instruction to change the firewall with nobody watching, so it is off until you turn it on. Each block is still a call to nftably and still lands in the actions ledger, with <span class="mono">auto</span> as the actor.</small>
+				</div>
+				<div class="field">
+					<label for="autoblock_max">At most, per hour</label>
+					<input type="number" id="autoblock_max" name="autoblock_max" value="{{.Settings.AutoBlockMaxHour}}" min="1" max="1000">
+					<small>The safety net. One badly chosen rule &mdash; a reputation feed with a false positive, a signature that matches an upstream resolver &mdash; could otherwise blackhole a large part of the internet before anyone noticed.</small>
+				</div>
+			</div>
+
+			<button type="submit" class="btn btn-primary">Save</button>
+		</form>
+
+		{{if .Settings.AutoBlockEnabled}}
+		<dl class="kv-grid">
+			<dt>Considered</dt><dd class="mono">{{num .AutoStats.Considered}}</dd>
+			<dt>Blocked</dt><dd class="mono">{{num .AutoStats.Blocked}}</dd>
+			<dt>Held by the rate limit</dt><dd class="mono">{{num .AutoStats.RateLimited}}</dd>
+			<dt>Dropped (queue full)</dt><dd class="mono">{{num .AutoStats.Dropped}}</dd>
+		</dl>
+		{{end}}
+
+		<p class="text-muted hint">meerkat never asks Suricata to drop a packet. suricata-update can rewrite a rule's action to <span class="mono">drop</span>, and meerkat will not do it: left dropping on this router Suricata once ate 258,101 of 2,676,291 packets &mdash; 9.6% of transit &mdash; so blocking belongs to nftables. &ldquo;Always block&rdquo; means meerkat pushes the source address to nftably when the rule fires.</p>
+	</div>
+</div>
+{{end}}
+
+{{if eq .Tab "threats"}}
+<div class="card">
+	<div class="card-header"><span class="card-title">{{template "icon-globe"}}Publish to the threat map</span></div>
+	<div class="card-body">
+		<p class="text-muted">Batches of detections are gzipped and POSTed to the public map. Two things never leave this box, by construction: <strong>the destination address</strong> — the map shows a site name and a port, because publishing which of our hosts are live and being probed is free reconnaissance — and <strong>any source inside our own networks</strong>, since an infected internal machine calling out trips a rule with our address as the source.</p>
+		<form method="post" action="/settings/threats">
+			<div class="field">
+				<label class="check-label"><input type="checkbox" name="enabled"{{if .Settings.ThreatsEnabled}} checked{{end}}> Publish detections</label>
+				<small>Takes effect on restart.</small>
+			</div>
+			<div class="field">
+				<label for="threats_url">Collector URL</label>
+				<input type="text" id="threats_url" name="threats_url" value="{{.Settings.ThreatsURL}}" placeholder="https://threats.example.net/api/threats/ingest">
+			</div>
+			<div class="field">
+				<label for="threats_token">Ingest token</label>
+				<input type="password" id="threats_token" name="threats_token" placeholder="{{if .Settings.ThreatsToken}}unchanged — leave blank to keep it{{else}}the site's THREATS_INGEST_TOKEN{{end}}" autocomplete="off">
+				<small>Must match <span class="mono">THREATS_INGEST_TOKEN</span> on the website. Unset there means ingest is closed, not open — it answers 401.</small>
+			</div>
+			<div class="field-row">
+				<div class="field">
+					<label for="site_name">Site name</label>
+					<input type="text" id="site_name" name="site_name" value="{{.Settings.SiteName}}" placeholder="Example Site">
+					<small>The map shows destinations as <span class="mono">{{if .Settings.SiteName}}{{.Settings.SiteName}}{{else}}Example Site{{end}}:22</span> — this name stands in for every customer address behind it.</small>
+				</div>
+				<div class="field">
+					<label for="site_country">Country</label>
+					<input type="text" id="site_country" name="site_country" value="{{.Settings.SiteCountry}}" placeholder="RO" maxlength="2">
+				</div>
+			</div>
+			<div class="field-row">
+				<div class="field">
+					<label for="site_lat">Latitude</label>
+					<input type="text" id="site_lat" name="site_lat" value="{{.Settings.SiteLat}}" placeholder="44.8565">
+				</div>
+				<div class="field">
+					<label for="site_lng">Longitude</label>
+					<input type="text" id="site_lng" name="site_lng" value="{{.Settings.SiteLng}}" placeholder="24.8692">
+					<small>Where the arcs land. A site at 0,0 would draw every attack into the Atlantic, so publishing is refused without coordinates.</small>
+				</div>
+			</div>
+			<div class="field">
+				<label for="home_nets">Our networks — never published</label>
+				<textarea id="home_nets" name="home_nets" rows="7">{{.HomeNets}}</textarea>
+				<small>One IP or CIDR per line. A detection whose <em>source</em> falls in any of these is silently withheld. Leaving this blank falls back to the built-in defaults rather than publishing everything — failing open here would put customer addresses on a public page.</small>
+				{{if .HomeNetErrs}}<div class="error-text">{{range .HomeNetErrs}}<div>{{.}}</div>{{end}}</div>{{end}}
+			</div>
+			<button type="submit" class="btn btn-primary">Save</button>
+		</form>
+	</div>
+</div>
+
+<div class="card">
+	<div class="card-header"><span class="card-title">{{template "icon-activity"}}Publisher status</span></div>
+	<div class="card-body">
+		{{if .Ship.Configured}}
+		<dl class="kv-grid">
+			<dt>Detections published</dt><dd class="mono">{{num .Ship.Shipped}}</dd>
+			<dt>Withheld as ours</dt><dd class="mono">{{num .Ship.Withheld}}</dd>
+			<dt>Batches</dt><dd class="mono">{{num .Ship.Batches}}</dd>
+			<dt>Failures</dt><dd class="mono">{{num .Ship.Failures}}</dd>
+			<dt>Position</dt><dd class="mono">event #{{num .Ship.Cursor}}</dd>
+			<dt>Last success</dt><dd>{{if .Ship.LastOK}}<span data-ts="{{isotime .Ship.LastOK}}">{{fmttime .Ship.LastOK}}</span>{{else}}<span class="text-muted">never</span>{{end}}</dd>
+			{{if .Ship.LastError}}<dt>Last problem</dt><dd class="text-danger mono">{{.Ship.LastError}}</dd>{{end}}
+		</dl>
+		<form method="post" action="/settings/threats/test">
+			<button type="submit" class="btn">Send a test detection</button>
+		</form>
+		<p class="text-muted hint">The test publishes one synthetic detection from a documentation address (192.0.2.1), so it never puts a real host on the map.</p>
+		{{else}}
+		<div class="empty">Publishing is off. Turn it on above, save, and restart meerkat.</div>
+		{{end}}
+	</div>
+</div>
+{{end}}
+
+{{if eq .Tab "access"}}
+<div class="card">
+	<div class="card-header"><span class="card-title">{{template "icon-shield"}}Access control</span></div>
+	<div class="card-body">
+		<p class="text-muted">This applies from the very next request — there is no confirmation step. If the list does not include the address you are browsing from, you will be cut off immediately.</p>
+		{{if .AccessErrs}}<div class="error-text">{{range .AccessErrs}}<div>{{.}}</div>{{end}}</div>{{end}}
+		<form method="post" action="/settings/access">
+			<div class="field">
+				<label for="access_whitelist">Allowed addresses</label>
+				<textarea id="access_whitelist" name="access_whitelist" rows="6" placeholder="203.0.113.4&#10;10.0.0.0/8">{{.Settings.AccessWhitelist}}</textarea>
+				<small>One IP or CIDR per line; <span class="mono">#</span> comments are ignored. A client outside the list gets no response at all — the connection is closed, so a scanner cannot tell there is a service here. <strong>Loopback is always allowed</strong> and an empty list means no restriction, so an SSH tunnel is always a way back in.</small>
+			</div>
+			<button type="submit" class="btn btn-primary">Save</button>
+		</form>
+	</div>
+</div>
+{{end}}
+
+{{if eq .Tab "theme"}}
+<div class="card">
+	<div class="card-header"><span class="card-title">{{template "icon-sun"}}Accent colour</span></div>
+	<div class="card-body">
+		<p class="text-muted">The accent used for links, primary buttons and highlights. Green is the shared default across meerkat, birdy and nftably; the neutral surfaces stay the same. Saved to your account, so it follows you across browsers.</p>
+		<div class="accent-grid">
+			<label class="accent-choice"><input type="radio" name="accent" value="green" data-accent-choice="green"><span class="accent-swatch" data-accent="green"></span>Green</label>
+			<label class="accent-choice"><input type="radio" name="accent" value="ocean" data-accent-choice="ocean"><span class="accent-swatch" data-accent="ocean"></span>Ocean</label>
+			<label class="accent-choice"><input type="radio" name="accent" value="violet" data-accent-choice="violet"><span class="accent-swatch" data-accent="violet"></span>Violet</label>
+			<label class="accent-choice"><input type="radio" name="accent" value="amber" data-accent-choice="amber"><span class="accent-swatch" data-accent="amber"></span>Amber</label>
+		</div>
+	</div>
+</div>
+<div class="card">
+	<div class="card-header"><span class="card-title">{{template "icon-sun"}}Light &amp; dark</span></div>
+	<div class="card-body">
+		<p class="text-muted">Follow your system, or pin light or dark. The sun button in the top bar toggles light/dark too.</p>
+		<div class="mode-grid">
+			<label class="mode-choice"><input type="radio" name="mode" value="system" data-mode-choice="system"> System</label>
+			<label class="mode-choice"><input type="radio" name="mode" value="light" data-mode-choice="light"> Light</label>
+			<label class="mode-choice"><input type="radio" name="mode" value="dark" data-mode-choice="dark"> Dark</label>
+		</div>
+		<p class="text-muted hint">Density is the list button beside the sun. It is a per-screen choice, so it lives in this browser rather than on your account — same as birdy.</p>
+	</div>
+</div>
+{{end}}
+{{template "shell-close" .}}

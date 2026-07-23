@@ -1,0 +1,33 @@
+version: "2"
+
+# meerkat keeps a small, correctness-focused linter set: the default v2 linters
+# (errcheck, govet, ineffassign, staticcheck, unused) plus misspell. No style
+# nags — the house style is deliberately explicit and a linter fighting it would
+# only produce churn.
+linters:
+  enable:
+    - misspell
+  settings:
+    errcheck:
+      exclude-functions:
+        # Every FlagSet here is created with ExitOnError, so Parse exits itself.
+        - (*flag.FlagSet).Parse
+  exclusions:
+    rules:
+      # Ignoring the error from a deferred or best-effort cleanup call — Close on
+      # a read path, a post-commit Rollback, removing a temp or probe file — is
+      # idiomatic; checking it at every site would only add noise. Write-path
+      # Close, where the flush error is the whole point, is still checked in the
+      # code.
+      - linters: [errcheck]
+        text: 'Error return value of `[^`]*\.(Close|Rollback|Remove|RemoveAll)` is not checked'
+      # The subcommands print through a text/tabwriter. A write into its buffer
+      # cannot fail on its own — the error surfaces from Flush, which every one
+      # of those callers does check — so checking each Fprintf would be noise.
+      - path: cmd/meerkat/
+        linters: [errcheck]
+        text: 'Error return value of `fmt\.Fprint(f|ln)?` is not checked'
+      # Test scaffolding drives in-memory pipes and throwaway files where an
+      # unchecked Read/Write/Close is fine.
+      - path: _test\.go
+        linters: [errcheck]

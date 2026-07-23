@@ -1,0 +1,25 @@
+# Build output
+/dist/
+/meerkat
+/meerkat.exe
+/meerkat-linux-*
+
+# meerkat's own state. The database holds the admin password hash, the nftably
+# API token, and the whole triage history — it never belongs in git.
+*.db
+*.db-wal
+*.db-shm
+tail.state
+
+# GeoIP databases are large and licensed separately (DB-IP Lite, CC-BY-4.0);
+# meerkat downloads them at runtime. The small ones under internal/geo/testdata
+# are deliberately committed as fixtures, so they are re-included below.
+*.mmdb
+!internal/geo/testdata/*.mmdb
+
+# Scratch output from the screenshot harness when it is pointed somewhere other
+# than docs/screenshots (which IS committed — the README links to it).
+/preview/
+
+.DS_Store
+

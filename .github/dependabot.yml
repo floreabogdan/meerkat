@@ -1,0 +1,27 @@
+version: 2
+updates:
+  # Go module dependencies. meerkat keeps a short list on purpose — the whole
+  # point is one static binary — so weekly is plenty.
+  - package-ecosystem: gomod
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+
+  # The actions CI and the release workflow pin.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "ci"
+
+  # The build stage in the Dockerfile.
+  - package-ecosystem: docker
+    directory: "/"
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: "docker"

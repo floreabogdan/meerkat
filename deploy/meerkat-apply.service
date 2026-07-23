@@ -1,0 +1,42 @@
+[Unit]
+Description=meerkat - apply a Suricata ruleset change
+Documentation=https://github.com/floreabogdan/meerkat
+After=suricata.service
+
+[Service]
+# This unit is the entire privileged surface of meerkat's rule management, and
+# it is deliberately tiny. The console runs unprivileged with no capabilities —
+# it parses attacker-influenced input all day — so it cannot write
+# /etc/suricata, cannot run suricata-update, and cannot open Suricata's
+# root-owned control socket. Instead it renders the filter files into its own
+# state directory and leaves a request; meerkat-apply.path notices and starts
+# this, which does four mechanical steps and writes back what happened.
+#
+# Nothing here makes a decision. It installs files it was given, runs one
+# program, asks Suricata to reload, and reports.
+Type=oneshot
+User=root
+
+# The packaged unit rewrites this to /usr/bin (Debian policy); a manual install
+# drops the binary in /usr/local/bin. See deploy/build-packages.sh.
+ExecStart=/usr/local/bin/meerkat rules apply --db /var/lib/meerkat/meerkat.db
+
+# suricata-update downloads the ruleset, merges 50,000-odd rules, applies the
+# filters and then test-loads the result in a throwaway Suricata. On a router
+# that last step is the slow one. meerkat imposes its own 20-minute bound; this
+# is the backstop above it.
+TimeoutStartSec=1800
+
+# The result file has to be readable by the meerkat user, which reads it back
+# and records the outcome.
+UMask=0022
+
+# Modest hardening. NoNewPrivileges is deliberately NOT set: suricata-update is
+# a Python program that execs Suricata to validate the rules it just built.
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelModules=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+SystemCallArchitectures=native

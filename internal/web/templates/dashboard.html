@@ -1,0 +1,203 @@
+{{template "shell-open" .}}
+<div class="page-top">
+	<span class="page-eyebrow">Overview</span>
+	<div class="breadcrumb"><span class="current">Dashboard</span></div>
+</div>
+
+<section class="hero">
+	<div class="hero-main">
+		<h1 class="hero-title mono">{{if .RouterLabel}}{{.RouterLabel}}{{else}}meerkat{{end}}</h1>
+		<p class="hero-sub">{{num .Counts.Events}} alerts from {{num .Counts.Sources}} sources &middot; {{num .Counts.Signatures}} distinct rules{{if .Retention}} &middot; {{.Retention}}-day retention{{end}}</p>
+	</div>
+	<div class="hero-side">
+		{{if .Ingest.Running}}{{if or .Ingest.Stale .Ingest.LastError}}
+		<div class="hero-status bad"><span class="dot"></span><span>ingest degraded</span></div>
+		{{else}}
+		<div class="hero-status ok"><span class="dot"></span><span>reading eve.json</span></div>
+		{{end}}{{else}}
+		<div class="hero-status bad"><span class="dot"></span><span>reader stopped</span></div>
+		{{end}}
+		{{if .Counts.NewestEvent}}<div class="hero-updated">newest alert <span data-ts="{{isotime .Counts.NewestEvent}}" title="{{fmttime .Counts.NewestEvent}}">{{fmttime .Counts.NewestEvent}}</span></div>{{end}}
+	</div>
+</section>
+
+{{template "ingest-warning" .Ingest}}
+
+<div class="stat-grid">
+	<div class="stat tint-primary">
+		<div class="stat-label">Sources</div>
+		<div class="stat-main"><span class="stat-icon">{{template "icon-sources"}}</span><span class="stat-value">{{num .Counts.Sources}}</span></div>
+		<div class="stat-rule"></div>
+		<a class="stat-link" href="/sources?state=new"><span class="arr" aria-hidden="true">&#8599;</span>{{num .Counts.NewSources}} not yet triaged</a>
+	</div>
+	<div class="stat tint-secondary">
+		<div class="stat-label">Alerts stored</div>
+		<div class="stat-main"><span class="stat-icon">{{template "icon-activity"}}</span><span class="stat-value">{{num .Counts.Events}}</span></div>
+		<div class="stat-rule"></div>
+		{{if .Counts.OldestEvent}}<span class="stat-note">{{duration .Counts.OldestEvent .Counts.NewestEvent}} of history</span>{{else}}<span class="stat-note">nothing ingested yet</span>{{end}}
+	</div>
+	<div class="stat tint-warning">
+		<div class="stat-label">Signatures seen</div>
+		<div class="stat-main"><span class="stat-icon">{{template "icon-list"}}</span><span class="stat-value">{{num .Counts.Signatures}}</span></div>
+		<div class="stat-rule"></div>
+		<span class="stat-note">distinct rules that fired</span>
+	</div>
+	<div class="stat {{if .Counts.Blocked}}tint-danger{{else}}tint-primary{{end}}">
+		<div class="stat-label">Blocked</div>
+		<div class="stat-main"><span class="stat-icon">{{template "icon-ban"}}</span><span class="stat-value">{{num .Counts.Blocked}}</span></div>
+		<div class="stat-rule"></div>
+		<span class="stat-note">actually banned in nftables</span>
+	</div>
+</div>
+
+{{if .Chart}}
+<div class="card">
+	<div class="card-header">
+		<span class="card-title">{{template "icon-activity"}}Alert volume</span>
+		<span class="text-muted">last 24 hours &middot; peak {{num .ChartPeak}}/hour</span>
+	</div>
+	<div class="card-body">
+		<svg class="spark" viewBox="0 0 480 100" preserveAspectRatio="none" role="img"
+		     aria-label="Alerts per hour over the last 24 hours; {{.ChartPeak}} in the busiest hour">
+			{{range .Chart}}{{if .H}}<rect x="{{.X}}" y="{{.Y}}" width="{{.W}}" height="{{.H}}"><title>{{fmttime .Start}} — {{.Count}}</title></rect>{{end}}{{end}}
+		</svg>
+		<div class="spark-axis"><span>{{fmttime .ChartFrom}}</span><span>now</span></div>
+	</div>
+</div>
+{{end}}
+
+<div class="two-col">
+	<div class="card">
+		<div class="card-header">
+			<span class="card-title">{{template "icon-list"}}What is making the noise</span>
+			<a class="btn btn-sm" href="/signatures">Mute rules</a>
+		</div>
+		<div class="card-body">
+			{{if .TopSignatures}}
+			<ul class="sig-bars">
+				{{range .TopSignatures}}
+				<li>
+					<a class="sig-name" href="/sources?sid={{.SID}}" title="Show the sources that tripped this rule">
+						<span class="mono">{{.SID}}</span> {{if .Signature}}{{.Signature}}{{else}}<span class="text-muted">unnamed rule</span>{{end}}
+					</a>
+					<progress class="sig-meter" value="{{.Hits}}" max="{{$.SigTotal}}" aria-label="{{pct .Hits $.SigTotal}} of all stored alerts"></progress>
+					<span class="sig-count mono">{{num .Hits}} <span class="text-muted">{{pct .Hits $.SigTotal}}</span></span>
+					<span class="sig-sources text-muted">{{num .SourceCount}} src</span>
+				</li>
+				{{end}}
+			</ul>
+			<p class="text-muted hint">A rule at the top with a source count to match is usually a reputation feed restating itself, not an incident.</p>
+			{{else}}<div class="empty">No signatures recorded yet.</div>{{end}}
+		</div>
+	</div>
+
+	<div class="card">
+		<div class="card-header">
+			<span class="card-title">{{template "icon-shield"}}Categories</span>
+			<span class="text-muted">share of volume</span>
+		</div>
+		<div class="card-body">
+			{{if .Categories}}
+			<ul class="sig-bars">
+				{{range .Categories}}
+				<li>
+					<span class="sig-name">{{.Category}}</span>
+					<progress class="sig-meter" value="{{.Hits}}" max="{{$.CategoryTotal}}" aria-label="{{pct .Hits $.CategoryTotal}}"></progress>
+					<span class="sig-count mono">{{num .Hits}} <span class="text-muted">{{pct .Hits $.CategoryTotal}}</span></span>
+					<span class="sig-sources"></span>
+				</li>
+				{{end}}
+			</ul>
+			{{else}}<div class="empty">No categories recorded yet.</div>{{end}}
+		</div>
+	</div>
+</div>
+
+<div class="two-col">
+	<div class="card">
+		<div class="card-header"><span class="card-title">{{template "icon-globe"}}Where from</span></div>
+		{{if .Countries}}
+		<div class="table-scroll">
+			<table data-search-target>
+				<thead><tr><th>Country</th><th class="num">Sources</th></tr></thead>
+				<tbody>
+					{{range .Countries}}
+					<tr>
+						<td><a href="/sources?country={{.Value}}">{{flag .Value}} {{.Value}}{{if .Label}} <span class="text-muted">{{.Label}}</span>{{end}}</a></td>
+						<td class="num mono">{{num .Count}}</td>
+					</tr>
+					{{end}}
+				</tbody>
+			</table>
+		</div>
+		{{else}}<div class="card-body"><div class="empty">No countries yet — is a GeoIP database loaded?</div></div>{{end}}
+	</div>
+
+	<div class="card">
+		<div class="card-header"><span class="card-title">{{template "icon-shield"}}What is being probed</span></div>
+		{{if .Ports}}
+		<div class="table-scroll">
+			<table data-search-target>
+				<thead><tr><th>Destination port</th><th class="num">Sources</th></tr></thead>
+				<tbody>
+					{{range .Ports}}
+					<tr>
+						<td class="mono"><a href="/sources?port={{.Value}}">{{.Value}}</a></td>
+						<td class="num mono">{{num .Count}}</td>
+					</tr>
+					{{end}}
+				</tbody>
+			</table>
+		</div>
+		{{else}}<div class="card-body"><div class="empty">No destination ports recorded — ICMP only, so far.</div></div>{{end}}
+	</div>
+</div>
+
+<div class="card">
+	<div class="card-header">
+		<span class="card-title">{{template "icon-sources"}}Busiest sources</span>
+		<a class="btn btn-sm" href="/sources?sort=events&amp;dir=desc">All sources</a>
+	</div>
+	{{if .Busiest}}
+	<div class="table-scroll">
+		<table data-search-target>
+			<thead><tr><th>Source</th><th>Where</th><th class="num">Alerts</th><th class="num">Sigs</th><th class="num">Ports</th><th>Worst</th><th>Last seen</th><th>State</th></tr></thead>
+			<tbody>
+				{{range .Busiest}}
+				<tr>
+					<td class="mono"><a href="/sources/{{.IP}}">{{.IP}}</a></td>
+					<td class="cell-where">{{template "source-identity" .}}</td>
+					<td class="num mono">{{num .EventCount}}</td>
+					<td class="num mono">{{.SigCount}}</td>
+					<td class="num mono">{{.PortCount}}</td>
+					<td>{{severityBadge .WorstSeverity}}</td>
+					<td class="nowrap" title="{{fmttime .LastSeen}}"><span data-ts="{{isotime .LastSeen}}">{{fmttime .LastSeen}}</span></td>
+					<td>{{stateBadge .State}}</td>
+				</tr>
+				{{end}}
+			</tbody>
+		</table>
+	</div>
+	{{else}}
+	<div class="card-body"><div class="empty">Nothing has alerted yet. meerkat is following eve.json and will fill this in as Suricata reports.</div></div>
+	{{end}}
+</div>
+
+{{if .Ship.Configured}}
+<div class="card">
+	<div class="card-header">
+		<span class="card-title">{{template "icon-globe"}}Threat map</span>
+		<a class="btn btn-sm" href="/settings?tab=threats">Configure</a>
+	</div>
+	<div class="card-body">
+		<dl class="kv-grid">
+			<dt>Published</dt><dd class="mono">{{num .Ship.Shipped}}</dd>
+			<dt>Withheld as ours</dt><dd class="mono">{{num .Ship.Withheld}}</dd>
+			<dt>Failures</dt><dd class="mono">{{num .Ship.Failures}}</dd>
+			<dt>Last success</dt><dd>{{if .Ship.LastOK}}<span data-ts="{{isotime .Ship.LastOK}}">{{fmttime .Ship.LastOK}}</span>{{else}}<span class="text-muted">never</span>{{end}}</dd>
+			{{if .Ship.LastError}}<dt>Last problem</dt><dd class="text-danger mono">{{.Ship.LastError}}</dd>{{end}}
+		</dl>
+	</div>
+</div>
+{{end}}
+{{template "shell-close" .}}

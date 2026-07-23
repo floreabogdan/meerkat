@@ -1,0 +1,203 @@
+{{define "head"}}
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/static/style.css">
+{{/* theme-bootstrap is deliberately render-blocking: it stamps the saved theme
+     onto <html> before first paint, so a dark-mode operator never gets a white
+     flash. Everything else defers. */}}
+<script src="/static/theme-bootstrap.js"></script>
+<script src="/static/theme.js" defer></script>
+<script src="/static/ui.js" defer></script>
+<script src="/static/command-palette.js" defer></script>
+<script src="/static/paginate.js" defer></script>
+{{end}}
+
+{{define "icon-dashboard"}}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg>{{end}}
+{{define "icon-sources"}}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg>{{end}}
+{{define "icon-search"}}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>{{end}}
+{{define "icon-clock"}}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></svg>{{end}}
+{{define "icon-settings"}}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>{{end}}
+{{define "icon-shield"}}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>{{end}}
+{{define "icon-list"}}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>{{end}}
+{{define "icon-sun"}}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>{{end}}
+{{define "icon-info"}}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>{{end}}
+{{define "icon-alert"}}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>{{end}}
+{{define "icon-activity"}}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>{{end}}
+{{define "icon-ban"}}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="5.6" y1="5.6" x2="18.4" y2="18.4"/></svg>{{end}}
+{{define "icon-globe"}}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>{{end}}
+{{define "icon-menu"}}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>{{end}}
+{{define "icon-user"}}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>{{end}}
+{{define "icon-bolt"}}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>{{end}}
+{{define "icon-bell"}}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>{{end}}
+{{define "icon-sliders"}}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>{{end}}
+{{define "icon-refresh"}}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>{{end}}
+{{define "icon-check"}}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>{{end}}
+{{define "icon-back"}}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>{{end}}
+
+{{define "sidebar"}}
+<aside class="sidebar" id="sidebar">
+	<div class="sidebar-brand-row">
+		<a class="sidebar-brand" href="/" aria-label="meerkat dashboard"><span class="brand-mark" aria-hidden="true">m</span><span class="brand-copy">meerkat<span class="brand-stage">Suricata console</span></span></a>
+		<button id="sidebar-collapse" class="sidebar-collapse" type="button" title="Collapse navigation" aria-label="Collapse navigation" aria-pressed="false">{{template "icon-menu"}}</button>
+	</div>
+	<nav class="sidebar-nav">
+		<div class="nav-label">Observe</div>
+		<a href="/" title="Dashboard" class="{{if eq .Active "dashboard"}}active{{end}}">{{template "icon-dashboard"}}<span class="nav-copy">Dashboard</span></a>
+
+		<div class="nav-label">Triage</div>
+		<a href="/sources" title="Sources" class="{{if eq .Active "sources"}}active{{end}}">{{template "icon-sources"}}<span class="nav-copy">Sources</span></a>
+		{{if eq .Active "sources"}}<div class="sidebar-subnav"><a href="/sources">All sources</a><a href="/sources?state=new">Not yet triaged</a><a href="/sources?severity=1">High severity</a><a href="/sources?sort=events&amp;dir=desc">Busiest</a></div>{{end}}
+		<a href="/signatures" title="Signatures" class="{{if eq .Active "signatures"}}active{{end}}">{{template "icon-list"}}<span class="nav-copy">Signatures</span></a>
+		<a href="/live" title="Live tail" class="{{if eq .Active "live"}}active{{end}}">{{template "icon-activity"}}<span class="nav-copy">Live tail</span></a>
+		<a href="/timeline" title="Timeline" class="{{if eq .Active "timeline"}}active{{end}}">{{template "icon-clock"}}<span class="nav-copy">Timeline</span></a>
+
+		<div class="nav-label">Sensor</div>
+		<a href="/rules" title="Rules" class="{{if eq .Active "rules"}}active{{end}}">{{template "icon-sliders"}}<span class="nav-copy">Rules</span></a>
+		{{if eq .Active "rules"}}<div class="sidebar-subnav"><a href="/rules?tab=categories">Categories</a><a href="/rules?tab=catalogue">All rules</a><a href="/rules?tab=catalogue&amp;firing=1">Firing now</a><a href="/rules?tab=changes">Pending changes</a><a href="/rules?tab=history">History</a></div>{{end}}
+
+		<div class="nav-label">System</div>
+		<a href="/settings" title="Settings" class="{{if eq .Active "settings"}}active{{end}}">{{template "icon-settings"}}<span class="nav-copy">Settings</span></a>
+		{{if eq .Active "settings"}}<div class="sidebar-subnav"><a href="/settings?tab=ingest">Ingest</a><a href="/settings?tab=geoip">Enrichment</a><a href="/settings?tab=blocking">Blocking</a><a href="/settings?tab=suricata">Suricata</a><a href="/settings?tab=threats">Threat map</a><a href="/settings?tab=access">Access</a></div>{{end}}
+	</nav>
+	<div class="sidebar-foot">
+		<div class="conn-line"><span id="ingest-conn" class="conn-dot"></span><span id="ingest-conn-label">checking ingest&hellip;</span></div>
+	</div>
+</aside>
+{{end}}
+
+{{define "topbar"}}
+<div class="nav-scrim" id="nav-scrim"></div>
+<div class="topbar">
+	<div class="topbar-left">
+		<button id="nav-toggle" class="icon-btn nav-toggle" title="Menu" type="button" aria-label="Open navigation">{{template "icon-menu"}}</button>
+		<div class="topbar-search">
+			{{template "icon-search"}}
+			<input type="text" id="topbar-search-input" placeholder="Filter this page&hellip;" autocomplete="off">
+			<span class="kbd-hint">/</span>
+		</div>
+		<button id="command-palette-toggle" class="icon-btn command-toggle" type="button" title="Open command palette" aria-label="Open command palette">{{template "icon-bolt"}}</button>
+	</div>
+	<div class="topbar-right">
+		<button id="compact-toggle" class="icon-btn" type="button" title="Use compact layout" aria-label="Use compact layout" aria-pressed="false">{{template "icon-list"}}</button>
+		<button id="theme-toggle" class="icon-btn" title="Switch color theme" type="button" aria-label="Switch color theme" aria-pressed="false">{{template "icon-sun"}}</button>
+		<a href="/timeline" class="icon-btn" title="Timeline">{{template "icon-bell"}}</a>
+		<details class="profile-menu">
+			<summary>
+				<span class="avatar" data-avatar>{{template "icon-user"}}</span>
+			</summary>
+			<div class="profile-panel">
+				<a href="/profile">Profile</a>
+				<form method="post" action="/logout"><button type="submit">Log out</button></form>
+			</div>
+		</details>
+	</div>
+</div>
+<div id="command-palette" class="command-palette" hidden>
+	<div class="command-panel" role="dialog" aria-modal="true" aria-label="Command palette">
+		<div class="command-search"><input type="search" placeholder="Find a page or action..." aria-label="Search commands" autocomplete="off"><span class="kbd-hint">Esc</span></div>
+		<nav class="command-list">
+			<div class="command-group">Navigate</div>
+			<a href="/" data-command>Dashboard <span>D</span></a>
+			<a href="/sources" data-command>Sources <span>S</span></a>
+			<a href="/signatures" data-command>Signatures <span>R</span></a>
+			<a href="/live" data-command>Live tail <span>L</span></a>
+			<a href="/timeline" data-command>Timeline <span>T</span></a>
+			<a href="/settings" data-command>Settings <span>,</span></a>
+			<div class="command-group">Triage</div>
+			<a href="/sources?state=new" data-command>Sources not yet triaged <span>New</span></a>
+			<a href="/sources?severity=1" data-command>High-severity sources only <span>Sev</span></a>
+			<a href="/sources?state=blocked" data-command>Blocked sources <span>Blocked</span></a>
+			<a href="/sources?window=1h&amp;sort=events&amp;dir=desc" data-command>Busiest in the last hour <span>Hot</span></a>
+			<div class="command-group">Configure</div>
+			<a href="/settings?tab=ingest" data-command>Ingest &amp; retention</a>
+			<a href="/settings?tab=geoip" data-command>Enrichment databases</a>
+			<a href="/settings?tab=blocking" data-command>Blocking via nftably</a>
+			<a href="/settings?tab=threats" data-command>Threat-map publisher</a>
+			<a href="/settings?tab=access" data-command>Access control</a>
+		</nav>
+	</div>
+</div>
+<script src="/static/topbar.js"></script>
+{{end}}
+
+{{/* shell-open is the frame every authenticated page uses. It matches birdy's
+     structure exactly, so moving between the two feels like one product. */}}
+{{define "shell-open"}}
+<!doctype html>
+<html lang="en">
+<head>
+	<title>meerkat{{if .RouterLabel}} — {{.RouterLabel}}{{end}}</title>
+	{{template "head" .}}
+</head>
+<body>
+<a class="skip-link" href="#main-content">Skip to content</a>
+<div class="app-shell">
+	{{template "sidebar" .}}
+	<div class="main">
+		{{template "topbar" .}}
+		<div class="page" id="main-content">
+{{end}}
+
+{{define "shell-close"}}
+		</div>
+	</div>
+</div>
+</body>
+</html>
+{{end}}
+
+{{/* pager: row summary, prev/next, and numbered pages with ellipses so you can
+     jump instead of clicking Next eleven times. Same shape as birdy's. */}}
+{{define "pager"}}
+{{if .Show}}
+<div class="pager">
+	<div class="pager-nav">
+		{{if .HasPrev}}<a class="btn btn-sm" href="{{rawURL .PrevURL}}" rel="prev">&larr; Prev</a>
+		{{else}}<span class="btn btn-sm is-disabled" aria-disabled="true">&larr; Prev</span>{{end}}
+		<span class="pager-pages">
+			{{range .Pages}}
+				{{if .Gap}}<span class="pager-gap">&hellip;</span>
+				{{else if .Current}}<span class="pager-page is-current" aria-current="page">{{.Num}}</span>
+				{{else}}<a class="pager-page" href="{{rawURL .URL}}">{{.Num}}</a>{{end}}
+			{{end}}
+		</span>
+		{{if .HasNext}}<a class="btn btn-sm" href="{{rawURL .NextURL}}" rel="next">Next &rarr;</a>
+		{{else}}<span class="btn btn-sm is-disabled" aria-disabled="true">Next &rarr;</span>{{end}}
+		<span class="pager-sizes">{{range .Sizes}}{{if eq . $.Size}}<span class="pager-page is-current">{{.}}</span>{{else}}<a class="pager-page" href="{{rawURL (index $.SizeURLs .)}}">{{.}}</a>{{end}}{{end}}</span>
+	</div>
+	<div class="pager-summary">{{.Summary}}</div>
+</div>
+{{end}}
+{{end}}
+
+{{/* ingest-warning is the strip shown when the reader is not reading. An empty
+     console has two very different causes and they must never look alike. */}}
+{{define "ingest-warning"}}
+{{if not .Running}}
+<div class="card card-warning">
+	<div class="card-body">{{template "icon-alert"}} <strong>The reader is not running.</strong>
+	meerkat is serving what it has already stored, but nothing new is being ingested.</div>
+</div>
+{{else if .LastError}}
+<div class="card card-warning">
+	<div class="card-body">{{template "icon-alert"}} <strong>Ingest reported a problem:</strong>
+	<span class="mono">{{.LastError}}</span></div>
+</div>
+{{else if .Stale}}
+<div class="card card-warning">
+	<div class="card-body">{{template "icon-alert"}} <strong>No lines have arrived from eve.json recently.</strong>
+	{{if .LastLineAt}}The last one was <span data-ts="{{isotime .LastLineAt}}" title="{{fmttime .LastLineAt}}">{{fmttime .LastLineAt}}</span>.{{else}}Nothing has been read since meerkat started.{{end}}
+	Suricata writes constantly on a live link, so a quiet file usually means it is stopped —
+	check <a href="/settings?tab=ingest">the eve.json path</a> or run <span class="mono">meerkat doctor</span>.</div>
+</div>
+{{end}}
+{{end}}
+
+{{/* source-identity renders an address with its flag, country and AS. */}}
+{{define "source-identity"}}
+{{if .IsLocal}}<span class="badge">private/local</span>
+{{else}}
+	{{if .Country}}<span title="{{.CountryName}}">{{flag .Country}} {{.Country}}</span>{{else}}<span class="text-muted">&mdash;</span>{{end}}
+	{{if .ASN}}<span class="text-muted">AS{{.ASN}}{{if .ASOrg}} {{.ASOrg}}{{end}}</span>{{end}}
+{{end}}
+{{end}}

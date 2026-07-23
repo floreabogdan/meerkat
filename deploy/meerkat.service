@@ -1,0 +1,49 @@
+[Unit]
+Description=meerkat - Suricata console
+Documentation=https://github.com/floreabogdan/meerkat
+After=network.target suricata.service
+Wants=suricata.service
+
+[Service]
+Type=simple
+User=meerkat
+Group=meerkat
+
+# meerkat needs to READ Suricata's eve.json. Debian ships it world-readable, but
+# a hardened suricata.yaml can set it 0640 root:adm, so the account joins that
+# group rather than running as root: meerkat parses attacker-influenced input all
+# day, so it gets the least privilege that lets it do its job. It needs no
+# capabilities at all — it does not touch netfilter (blocking is nftably's job,
+# over HTTP) and does not read the kernel ring buffer.
+SupplementaryGroups=adm
+
+# The packaged unit rewrites this to /usr/bin (Debian policy); a manual install
+# drops the binary in /usr/local/bin. See deploy/build-packages.sh.
+ExecStart=/usr/local/bin/meerkat server --db /var/lib/meerkat/meerkat.db
+Restart=on-failure
+RestartSec=5
+
+# Hardening. meerkat keeps its state under /var/lib/meerkat and needs nothing
+# else writable. ProtectSystem=strict makes the whole filesystem read-only for
+# this unit, so the state dir has to be named explicitly.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/meerkat
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+# Outbound HTTPS for the opt-in GeoIP download, and HTTP to nftably on
+# loopback for blocking. Nothing else.
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=multi-user.target

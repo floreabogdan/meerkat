@@ -1,0 +1,3 @@
+# Adds a "Sponsor" button to the repo. Keys map to funding platforms; the value
+# is the handle on each, not the full URL.
+buy_me_a_coffee: floreabogdan

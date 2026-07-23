@@ -1,0 +1,71 @@
+# nfpm packaging for meerkat — builds .deb / .rpm / .apk from a pre-built binary.
+# https://nfpm.goreleaser.com  —  run via deploy/build-packages.sh (locally or CI).
+#
+# Expects, in ./dist: the target binary as `meerkat` and the systemd unit as
+# `meerkat.service`. ARCH and VERSION come from the environment.
+name: meerkat
+arch: ${ARCH}
+platform: linux
+version: ${VERSION}
+maintainer: "Bogdan Florea <ixsplit@gmail.com>"
+description: |
+  A console for Suricata. meerkat follows eve.json, enriches every alert with
+  ASN, country and city, and stores it — but its home page is a list of source
+  addresses, not a list of events. A sensor that emits hundreds of alerts a
+  minute, most of them one reputation rule restating itself, does not need a
+  faster log viewer; it needs the log rolled up into decisions. Each source
+  carries first and last seen, alert count, distinct signatures, distinct ports,
+  worst severity and a triage state, and can be blocked in one click.
+  Blocking goes through nftables (via nftably's firewall API), never through
+  Suricata: an alert is "detected", and only an address actually banned in the
+  kernel is "blocked".
+  It listens on every interface and has no TLS, so set the IP allow-list
+  (Settings, Access control) as soon as you log in, or bind it to loopback and
+  tunnel in.
+vendor: meerkat
+homepage: https://github.com/floreabogdan/meerkat
+license: 0BSD
+section: net
+priority: optional
+
+contents:
+  - src: ./dist/meerkat
+    dst: /usr/bin/meerkat
+    file_info:
+      mode: 0755
+  - src: ./dist/meerkat.service
+    dst: /lib/systemd/system/meerkat.service
+    file_info:
+      mode: 0644
+  # The privileged half of rule management. meerkat's own service runs
+  # unprivileged with no capabilities and cannot write /etc/suricata or talk to
+  # Suricata's control socket; it leaves a request file and this oneshot, started
+  # by the path unit, does the four mechanical steps as root.
+  - src: ./dist/meerkat-apply.service
+    dst: /lib/systemd/system/meerkat-apply.service
+    file_info:
+      mode: 0644
+  - src: ./deploy/meerkat-apply.path
+    dst: /lib/systemd/system/meerkat-apply.path
+    file_info:
+      mode: 0644
+  - src: ./LICENSE
+    dst: /usr/share/doc/meerkat/copyright
+    file_info:
+      mode: 0644
+  - src: ./README.md
+    dst: /usr/share/doc/meerkat/README.md
+    file_info:
+      mode: 0644
+
+# Suricata is deliberately NOT a hard dependency. meerkat is useful against a
+# stopped sensor (there is history to triage), it can be pointed at an eve.json
+# copied off another box, and on a fleet one meerkat may eventually read for
+# several. It is a recommendation, not a requirement.
+overrides:
+  deb:
+    recommends:
+      - suricata
+  rpm:
+    recommends:
+      - suricata

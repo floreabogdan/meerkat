@@ -1,0 +1,59 @@
+{{template "shell-open" .}}
+<div class="page-top">
+	<span class="page-eyebrow">Triage</span>
+	<div class="breadcrumb"><span class="current">Signatures</span></div>
+</div>
+<div class="page-header">
+	<div>
+		<h1>Signatures</h1>
+		<div class="page-sub">Every rule that has fired, loudest first. Muting one stops it interrupting you — it does not stop it being recorded, so a muted rule still appears in the console and in each source's history.</div>
+	</div>
+</div>
+
+{{if .Done}}<div class="card card-success"><div class="card-body">{{.Done}}</div></div>{{end}}
+{{if .Err}}<div class="card card-danger"><div class="card-body">{{.Err}}</div></div>{{end}}
+
+<div class="card">
+	<div class="card-header">
+		<span class="card-title">{{template "icon-list"}}Rules that have fired</span>
+		<span class="text-muted">{{len .Signatures}} shown</span>
+	</div>
+	{{if .Signatures}}
+	<div class="table-scroll">
+		<table data-search-target>
+			<thead><tr><th>SID</th><th>Signature</th><th>Category</th><th class="num">Hits</th><th class="num">Share</th><th class="num">Sources</th><th>Sev</th><th>Disposition</th></tr></thead>
+			<tbody data-paginate data-page-size="50">
+				{{range .Signatures}}
+				<tr>
+					<td class="mono"><a href="/sources?sid={{.SID}}" title="Show the sources that tripped this rule">{{.SID}}</a></td>
+					<td>{{if .Signature}}{{.Signature}}{{else}}<span class="text-muted">unnamed</span>{{end}}</td>
+					<td class="text-muted">{{if .Category}}{{.Category}}{{else}}&mdash;{{end}}</td>
+					<td class="num mono">{{num .Hits}}</td>
+					<td class="num mono">{{pct .Hits $.Total}}</td>
+					<td class="num mono">{{num .SourceCount}}</td>
+					<td>{{severityBadge .Severity}}</td>
+					<td class="row-actions">
+						<form method="post" action="/signatures/disposition">
+							<input type="hidden" name="sid" value="{{.SID}}">
+							<input type="hidden" name="back" value="/signatures">
+							<select name="disposition" aria-label="Disposition for signature {{.SID}}">
+								<option value="notify"{{if eq .Disposition "notify"}} selected{{end}}>Notify</option>
+								<option value="digest"{{if eq .Disposition "digest"}} selected{{end}}>Digest</option>
+								<option value="mute"{{if eq .Disposition "mute"}} selected{{end}}>Mute</option>
+							</select>
+							<button type="submit" class="btn btn-sm">Set</button>
+						</form>
+					</td>
+				</tr>
+				{{end}}
+			</tbody>
+		</table>
+	</div>
+	<div class="card-body">
+		<p class="text-muted hint"><strong>Notify</strong> alerts as normal. <strong>Digest</strong> rolls the rule into a periodic summary instead of interrupting. <strong>Mute</strong> never notifies. Dispositions are honoured by the notifier; the console always shows everything.</p>
+	</div>
+	{{else}}
+	<div class="card-body"><div class="empty">No rules have fired yet.</div></div>
+	{{end}}
+</div>
+{{template "shell-close" .}}

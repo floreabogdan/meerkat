@@ -1,0 +1,35 @@
+{{template "shell-open" .}}
+<div class="page-top">
+	<span class="page-eyebrow">Triage</span>
+	<div class="breadcrumb"><span class="current">Timeline</span></div>
+</div>
+<div class="page-header">
+	<div>
+		<h1>Timeline</h1>
+		<div class="page-sub">What has happened to meerkat itself — logins, settings changes, retention passes, ingest problems. Suricata's alerts are on <a href="/">Sources</a>; this is the record of the console.</div>
+	</div>
+</div>
+
+<div class="card">
+	{{if .Entries}}
+	<div class="table-scroll">
+		<table data-search-target>
+			<thead><tr><th>When</th><th>Kind</th><th>Who</th><th>What</th></tr></thead>
+			<tbody data-paginate data-page-size="50">
+				{{range .Entries}}
+				<tr>
+					<td class="nowrap" title="{{fmttime .Ts}}"><span data-ts="{{isotime .Ts}}">{{fmttime .Ts}}</span></td>
+					<td>{{auditBadge .Kind}}</td>
+					<td>{{if .Actor}}{{.Actor}}{{else}}<span class="text-muted">system</span>{{end}}</td>
+					<td>{{.Message}}</td>
+				</tr>
+				{{end}}
+			</tbody>
+		</table>
+	</div>
+	{{if .NextURL}}<div class="card-body pager-row"><span></span><a class="btn btn-sm" href="{{.NextURL}}">Older &rsaquo;</a></div>{{end}}
+	{{else}}
+	<div class="card-body"><div class="empty">Nothing recorded yet.</div></div>
+	{{end}}
+</div>
+{{template "shell-close" .}}

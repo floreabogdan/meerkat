@@ -1,0 +1,11 @@
+.git
+.github
+dist
+docs
+*.db
+*.db-shm
+*.db-wal
+tail.state
+meerkat
+meerkat.exe
+meerkat-linux-*
