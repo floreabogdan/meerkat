@@ -6,10 +6,21 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-07-23
+
+First public release. meerkat follows Suricata's `eve.json`, enriches every alert
+with ASN, country and city, and rolls it all up per **source address** — because a
+sensor producing 891 alerts in four minutes from a few dozen hosts has not given
+you 891 things to read, it has given you a few dozen decisions to make.
+
+It covers ingest and the console, blocking through nftables, publishing to a
+public threat map, and managing Suricata's own ruleset. Notifications are the
+remaining piece; see `PLAN.md`.
+
 ### Added
 
-Managing the sensor, not just reading it. meerkat can now change which rules
-Suricata runs, without anyone editing a file on the router.
+Managing the sensor, not just reading it. meerkat can change which rules Suricata
+runs, without anyone editing a file on the router.
 
 - **Rule catalogue.** The whole installed ruleset — 68,005 rules on the reference sensor,
   52,069 of them enabled — parsed from the file Suricata actually loaded and
@@ -185,3 +196,6 @@ Phase 1 — ingest, enrich, store, and the sources console.
   verbatim, which on this deployment is always `allowed`; dropping is nftables'
   job, so only a source's state says whether anything is actually being blocked.
   See the README for why.
+
+[Unreleased]: https://github.com/floreabogdan/meerkat/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/floreabogdan/meerkat/releases/tag/v0.1.0
