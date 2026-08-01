@@ -17,7 +17,7 @@ RUN CGO_ENABLED=0 go build -trimpath \
       -o /out/meerkat ./cmd/meerkat
 
 # ── runtime ──────────────────────────────────────────────────────────────
-FROM alpine:3.20
+FROM alpine:3.24
 # ca-certificates: the opt-in DB-IP GeoIP download is the only thing meerkat
 # ever fetches, and it is HTTPS-only.
 RUN apk add --no-cache ca-certificates \
